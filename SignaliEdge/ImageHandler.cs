@@ -190,6 +190,7 @@ namespace SignaliEdge
             }
 
             _currentBitmap.UnlockBits(bData);
+            Console.WriteLine("test");
         }
 
 
