@@ -11,7 +11,6 @@ namespace SignaliEdge
         private string _bitmapPath;
         private Bitmap _currentBitmap;
         private Bitmap _originalBitmap;
-        private List<string> dataCoordinates = new List<string>();
         private bool isGrayscale = false;
         byte bitsPerPixel;
 
@@ -147,7 +146,7 @@ namespace SignaliEdge
         /// Passed matrix consists only of 0s and 1s.
         /// </summary>
         /// <param name="norm">Matrix with values between 0 and 1</param>
-        public unsafe void DenormalizeCurrent(double[,] norm)
+        public unsafe void DenormalizeCurrent(double[,] norm, List<string> dataCoordinates)
         {
             if(norm == null) return;
             int n = norm.GetLength(0);
@@ -188,9 +187,7 @@ namespace SignaliEdge
                     }
                 }
             }
-
             _currentBitmap.UnlockBits(bData);
-            Console.WriteLine("test");
         }
 
 

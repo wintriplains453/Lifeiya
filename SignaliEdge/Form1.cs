@@ -21,9 +21,12 @@ namespace SignaliEdge
     public partial class Form1 : Form
     {
         private Image<Bgr, byte> inputImage;
-
+        private List<string> dataCoordinates = new List<string>();
+        
         readonly ImageHandler imageHandler = new ImageHandler();
         readonly Detector detector = new Detector();
+
+
         public Form1()
         {
             InitializeComponent();
@@ -94,7 +97,19 @@ namespace SignaliEdge
             {
                 var n = imageHandler.GetNormalizedMatrix();
                 var slika = detector.Detection(n, trbPrecision.Value);
-                imageHandler.DenormalizeCurrent(slika);              
+                imageHandler.DenormalizeCurrent(slika, dataCoordinates);
+                detector.ContoursList(dataCoordinates);
+                try
+                {
+                    for (int i = 0; i < detector.currentListEnd.Count; i++)
+                    {
+                        int[] item = detector.currentListEnd[i].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+                        inputImage[item[1], item[0]] = new Bgr(0,0,255);
+                    }
+                } catch
+                {
+
+                }
                 n = null;
                 slika = null;
 
@@ -106,9 +121,8 @@ namespace SignaliEdge
                 detector.CleanUp();
                 GC.Collect();
 
-                // Konacno postavi sliku
-                pbSlika.Image = imageHandler.CurrentBitmap;
-                //pbSlika.Image = inputImage.Bitmap;
+                //pbSlika.Image = imageHandler.CurrentBitmap;
+                pbSlika.Image = inputImage.Bitmap;
             }
             catch (OutOfMemoryException)
             {

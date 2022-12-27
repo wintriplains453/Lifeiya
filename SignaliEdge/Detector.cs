@@ -12,10 +12,25 @@ namespace SignaliEdge
 {
     class Detector
     {
-        public Detector() {}
+        public Detector() { }
+
+        public List<string> currentListEnd = new List<string>();
+        private byte directionContours = 0;
+        private int[] currentData;
+        private string start_checkPoint = "";
+        private bool is_BlockingSearch = false;
+
+        private byte signX = 1;
+        private byte signY = 0;
+        private bool is_signX = true;
+        private bool is_signY = false;
+
 
         private bool _maxPrecision;
         public bool MaxPrecision { get; set; }
+
+        //Временный список
+        private List<string> currentListLive = new List<string>();
 
         //UpperTreshold = ut, LowerTreshold = lt
         private double ut, lt;
@@ -74,30 +89,14 @@ namespace SignaliEdge
             if (matrica == null) return null;
 
             int x = matrica.GetLength(0), y = matrica.GetLength(1);
-            /*double[,] prosirena = new double[x * 3, y * 3];
-            for (int i = 0; i < prosirena.GetLength(0); i++)
-                for (int j = 0; j < prosirena.GetLength(1); j++)
-                {
-                    int modJ=j % y;
-                    int modI=i % x;
-                    prosirena[i, j] = matrica[modI, modJ];
-                }
+
             double[,] vracaSe = new double[x + 2 * prosirenje, y + 2 * prosirenje];
-            for (int i = x - prosirenje; i < 2 * x + prosirenje; i++)
-                for (int j = y - prosirenje; j < 2 * y + prosirenje; j++)
+            for (int i = -prosirenje; i < x + prosirenje - 1; i++)
+                for (int j = -prosirenje; j < y + prosirenje - 1; j++)
                 {
-                    int razlikaI = i - x + prosirenje;
-                    int razlikaJ = j - y + prosirenje;
-                    vracaSe[razlikaI, razlikaJ] = prosirena[i, j];
-                }
-            return vracaSe;*/
-            double[,] vracaSe = new double[x + 2 * prosirenje, y + 2 * prosirenje];
-            for (int i = -prosirenje; i < x + prosirenje-1; i++)
-                for (int j = -prosirenje; j < y + prosirenje-1; j++)
-                {
-                    var ii = (i + x)%x;
-                    int jj = (j + y)%y;
-                    vracaSe[i+2, j+2] = matrica[ii, jj];
+                    var ii = (i + x) % x;
+                    int jj = (j + y) % y;
+                    vracaSe[i + 2, j + 2] = matrica[ii, jj];
                 }
             return vracaSe;
         }
@@ -123,7 +122,7 @@ namespace SignaliEdge
                 throw;
             }
 
-            int xIzvodx=xIzvod.GetLength(0), xIzvody = xIzvod.GetLength(1);
+            int xIzvodx = xIzvod.GetLength(0), xIzvody = xIzvod.GetLength(1);
             magnitudaGradijenta = new double[xIzvodx, xIzvody];
             smerGradijenta = new double[xIzvodx, xIzvody];
 
@@ -221,11 +220,14 @@ namespace SignaliEdge
             int prolaz = 0;
 
             bool nastavi = true;
-            while ( nastavi ) {
+            while (nastavi)
+            {
                 prolaz = prolaz + 1;
                 pomStaro = pomH;
-                for (int x = 1; x < xIzvodx - 1; x++) {
-                    for (int y = 1; y < xIzvody - 1; y++) {
+                for (int x = 1; x < xIzvodx - 1; x++)
+                {
+                    for (int y = 1; y < xIzvody - 1; y++)
+                    {
                         if (magnitudaGradijenta[x, y] <= ut && magnitudaGradijenta[x, y] >= lt)
                         {
                             double pom1 = magnitudaGradijenta[x - 1, y - 1];
@@ -243,11 +245,10 @@ namespace SignaliEdge
                                 pomH = pomH + 1;
 
                             }
-
                         }
                     }
                 }
-                
+
                 if (_maxPrecision)
                 {
                     nastavi = pomH != pomStaro;
@@ -276,7 +277,7 @@ namespace SignaliEdge
             //automatsko odredjivanje
             double suma = 0;
             double broj = 0;
-            
+
             for (var x = 1; x < dimx - 1; x++)
                 for (var y = 1; y < dimy - 1; y++)
                 {
@@ -288,7 +289,7 @@ namespace SignaliEdge
                 }
             ut = suma / broj;
             lt = 0.4 * ut;
-            
+
         }
 
         private double maxi(double[,] mat)
@@ -303,6 +304,314 @@ namespace SignaliEdge
             return m;
         }
 
+        //dataCoordinates[x,y]
+        public void ContoursList(List<string> dataCoordinates)
+        {
+            int length_dataCoordinates = dataCoordinates.Count;
+            bool is_cyrcle_while = true;
+
+            int[] itemData = dataCoordinates[0].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+            currentData = dataCoordinates[0].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+
+            for (int m = 0; m < length_dataCoordinates; m++)//Перебор всех точек
+            {
+                //Console.WriteLine(true);
+                //if (!currentListEnd.Contains(dataCoordinates[m]))
+                //{
+                currentData = dataCoordinates[m].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+                is_cyrcle_while = true;
+                //Console.WriteLine("start = " + dataCoordinates[m]);
+
+                signX = 1;
+                signY = 0;
+                is_signX = true;
+                is_signY = false;
+                start_checkPoint = dataCoordinates[m];
+
+                while (is_cyrcle_while)//Перебор всех точек
+                {
+                    if (!currentListEnd.Contains(currentData[0] + "|" + currentData[1]) && dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
+                    {
+                        currentListLive.Add(currentData[0] + "|" + currentData[1]);
+
+                        //X и Y -1 или +1 (направления в signX и signY определяется в методе ChangeDirection)
+                        currentData[0] = is_signX == true ? currentData[0] + signX : currentData[0] - signX;
+                        currentData[1] = is_signY == true ? currentData[1] + signY : currentData[1] - signY;
+
+                        if (!dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
+                        {
+                            currentData[0] = is_signX == true ? currentData[0] - signX : currentData[0] + signX;
+                            currentData[1] = is_signY == true ? currentData[1] - signY : currentData[1] + signY;
+                            ChangeDirection(dataCoordinates);
+                        }
+                        //Console.WriteLine("X = " + currentData[0] + " Y = " + currentData[1]);
+                    }
+                    else
+                    {
+                        ChangeDirection(dataCoordinates);
+
+                        if (is_BlockingSearch)
+                        {
+                            is_BlockingSearch = false;
+                            is_cyrcle_while = false;
+                            break;
+                        }
+                    }
+                    int length_currentListLive = currentListLive.Count;
+                    for (int j = 0; j < length_currentListLive; j++)
+                    {
+                        currentListEnd.Add(currentListLive[j]);
+                    }
+                    currentListLive.Clear();
+                    if (is_BlockingSearch)
+                    {
+                        is_BlockingSearch = false;
+                        break;
+                    }
+                }
+                //} else
+                //{
+                //int[] start_checkPoint_Array = start_checkPoint.Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+                //int[] result_Point = new int[2];
+                //result_Point[0] = start_checkPoint_Array[0] > currentData[0] ? start_checkPoint_Array[0] - currentData[0] : currentData[0] - start_checkPoint_Array[0];
+                //result_Point[1] = start_checkPoint_Array[1] > currentData[1] ? start_checkPoint_Array[1] - currentData[1] : currentData[1] - start_checkPoint_Array[1];
+                //if(result_Point[0] == 1 || result_Point[1] == 1)
+                //{
+                //    Console.WriteLine("Замкнулся");
+                //    break;
+                // }
+                // }
+            }
+        }
+
+        //signX signY - значения var = -1 , +1
+        public void ChangeDirection(List<string> dataCoordinates)
+        {
+            //test
+            //Console.WriteLine("X = " + currentData[0] + " Y = " + currentData[1]);
+            bool _is_searching = false;
+
+            string[] _dataPosition = new string[8];
+            string[,] _dataPosition_direction = new string[8, 4];
+            byte[] _dataPosition_directionPosition = new byte[8];
+
+            switch (directionContours)
+            {
+                case 0:
+                    _dataPosition[0] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[1] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[2] = (currentData[0] + 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[3] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[4] = (currentData[0] + 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[5] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[6] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[7] = (currentData[0] + 1) + "|" + currentData[1];
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "1", "0", "true", "false" },
+                        { "0", "1", "false", "true" },
+                        { "1", "1", "true", "true" },
+                        { "0", "1", "false", "false" },
+                        { "1", "1", "true", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 0, 2, 1, 6, 7, 0, 0, 0 };
+                    break;
+                case 1:
+                    _dataPosition[0] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[1] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[2] = (currentData[0] + 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[3] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[4] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[5] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[6] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[7] = (currentData[0] + 1) + "|" + currentData[1];
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "1", "0", "true", "false" },
+                        { "0", "1", "false", "true" },
+                        { "1", "1", "true", "true" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "0", "true", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 0, 2, 1, 0, 0, 0, 0, 0 };
+                    break; 
+                case 2:
+                    _dataPosition[0] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[1] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[2] = (currentData[0] - 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[3] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[4] = (currentData[0] + 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[5] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[6] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[7] = currentData[0] + "|" + (currentData[1] + 1);
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "0", "1", "false", "true" },
+                        { "1", "0", "false", "false" },
+                        { "1", "1", "false", "true" },
+                        { "1", "0", "true", "false" },
+                        { "1", "1", "true", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 2, 4, 3, 0, 1, 2, 2, 2 };
+                    break;
+                case 3:
+                    _dataPosition[0] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[1] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[2] = (currentData[0] - 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[3] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[4] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[5] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[6] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[7] = currentData[0] + "|" + (currentData[1] + 1);
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "0", "1", "false", "true" },
+                        { "1", "0", "false", "false" },
+                        { "1", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                        { "0", "1", "false", "true" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 2, 4, 3, 2, 2, 2, 2, 2 };
+                    break;
+                case 4:
+                    _dataPosition[0] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[1] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[2] = (currentData[0] - 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[3] = currentData[0] + "|" + (currentData[1] + 1);
+                    _dataPosition[4] = (currentData[0] - 1) + "|" + (currentData[1] + 1);
+                    _dataPosition[5] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[6] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[7] = (currentData[0] - 1) + "|" + currentData[1];
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "1", "0", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "1", "1", "false", "false" },
+                        { "0", "1", "false", "true" },
+                        { "1", "1", "false", "true" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 4, 6, 5, 2, 3, 4, 4, 4 };
+                    break;
+                case 5:
+                    _dataPosition[0] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[1] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[2] = (currentData[0] - 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[3] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[4] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[5] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[6] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[7] = (currentData[0] - 1) + "|" + currentData[1];
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "1", "0", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "1", "1", "false", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "0", "false", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 4, 6, 5, 4, 4, 4, 4, 4 };
+                    break;
+                case 6:
+                    _dataPosition[0] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[1] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[2] = (currentData[0] + 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[3] = (currentData[0] - 1) + "|" + currentData[1];
+                    _dataPosition[4] = (currentData[0] - 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[5] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[6] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[7] = currentData[0] + "|" + (currentData[1] - 1);
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "0", "1", "false", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "1", "true", "false" },
+                        { "1", "0", "false", "false" },
+                        { "1", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 6, 0, 7, 4, 5, 6, 6, 6 };
+                    break;
+                case 7:
+                    _dataPosition[0] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[1] = (currentData[0] + 1) + "|" + currentData[1];
+                    _dataPosition[2] = (currentData[0] + 1) + "|" + (currentData[1] - 1);
+                    _dataPosition[3] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[4] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[5] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[6] = currentData[0] + "|" + (currentData[1] - 1);
+                    _dataPosition[7] = currentData[0] + "|" + (currentData[1] - 1);
+
+                    _dataPosition_direction = new string[8, 4] {
+                        { "0", "1", "false", "false" },
+                        { "1", "0", "true", "false" },
+                        { "1", "1", "true", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                        { "0", "1", "false", "false" },
+                    };
+                    _dataPosition_directionPosition = new byte[8] { 6, 0, 7, 6, 6, 6, 6, 6 };
+                    break;
+            }
+
+            for (byte i = 0; i < _dataPosition.Length; i++)
+            {
+                if (dataCoordinates.Contains(_dataPosition[i]) && i != 7 && !currentListEnd.Contains(currentData[0] + "|" + currentData[1]))
+                {
+                    signX = Convert.ToByte(_dataPosition_direction[i, 0]);
+                    signY = Convert.ToByte(_dataPosition_direction[i, 1]);
+
+                    is_signX = Convert.ToBoolean(_dataPosition_direction[i, 2]);
+                    is_signY = Convert.ToBoolean(_dataPosition_direction[i, 3]);
+
+                    directionContours = _dataPosition_directionPosition[i];
+
+                    currentData[0] = is_signX == true ? currentData[0] + signX : currentData[0] - signX;
+                    currentData[1] = is_signY == true ? currentData[1] + signY : currentData[1] - signY;
+
+                    if (currentListEnd.Contains(currentData[0] + "|" + currentData[1]))
+                    {
+                        currentData[0] = is_signX == true ? currentData[0] - signX : currentData[0] + signX;
+                        currentData[1] = is_signY == true ? currentData[1] - signY : currentData[1] + signY;
+                    }
+
+                    if (start_checkPoint == currentData[0] + "|" + currentData[1])
+                    {
+                        Console.WriteLine("Замкнулся");
+                        is_BlockingSearch = true;
+                    }
+                    _is_searching = true;
+                    break;
+                }
+            }
+
+            if (!_is_searching)
+            {
+                is_BlockingSearch = true;
+            }
+            //
+        }
 
         internal void CleanUp()
         {
