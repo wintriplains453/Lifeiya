@@ -110,6 +110,7 @@ namespace SignaliEdge
                 {
 
                 }
+
                 n = null;
                 slika = null;
 

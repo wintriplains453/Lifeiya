@@ -17,6 +17,7 @@ namespace SignaliEdge
         public List<string> currentListEnd = new List<string>();
         private byte directionContours = 0;
         private int[] currentData;
+        private int[] start_checkPointItems;
         private string start_checkPoint = "";
         private bool is_BlockingSearch = false;
 
@@ -315,79 +316,87 @@ namespace SignaliEdge
 
             for (int m = 0; m < length_dataCoordinates; m++)//Перебор всех точек
             {
-                //Console.WriteLine(true);
-                //if (!currentListEnd.Contains(dataCoordinates[m]))
-                //{
-                currentData = dataCoordinates[m].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
-                is_cyrcle_while = true;
-                //Console.WriteLine("start = " + dataCoordinates[m]);
-
-                signX = 1;
-                signY = 0;
-                is_signX = true;
-                is_signY = false;
-                start_checkPoint = dataCoordinates[m];
-
-                while (is_cyrcle_while)//Перебор всех точек
+                if (!currentListEnd.Contains(dataCoordinates[m]))
                 {
-                    if (!currentListEnd.Contains(currentData[0] + "|" + currentData[1]) && dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
+                    currentData = dataCoordinates[m].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
+                    is_cyrcle_while = true;
+                    Console.WriteLine("start = " + dataCoordinates[m]);
+
+                    signX = 1;
+                    signY = 0;
+                    is_signX = true;
+                    is_signY = false;
+                    start_checkPoint = dataCoordinates[m];
+                    start_checkPointItems = dataCoordinates[m].Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();
+                    directionContours = 0;
+
+                    while (is_cyrcle_while)//Перебор всех точек
                     {
-                        currentListLive.Add(currentData[0] + "|" + currentData[1]);
-
-                        //X и Y -1 или +1 (направления в signX и signY определяется в методе ChangeDirection)
-                        currentData[0] = is_signX == true ? currentData[0] + signX : currentData[0] - signX;
-                        currentData[1] = is_signY == true ? currentData[1] + signY : currentData[1] - signY;
-
-                        if (!dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
+                        if (!currentListEnd.Contains(currentData[0] + "|" + currentData[1]) && dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
                         {
-                            currentData[0] = is_signX == true ? currentData[0] - signX : currentData[0] + signX;
-                            currentData[1] = is_signY == true ? currentData[1] - signY : currentData[1] + signY;
-                            ChangeDirection(dataCoordinates);
+                            currentListLive.Add(currentData[0] + "|" + currentData[1]);
+
+                            //X и Y -1 или +1 (направления в signX и signY определяется в методе ChangeDirection)
+                            currentData[0] = is_signX == true ? currentData[0] + signX : currentData[0] - signX;
+                            currentData[1] = is_signY == true ? currentData[1] + signY : currentData[1] - signY;
+
+                            if (!dataCoordinates.Contains(currentData[0] + "|" + currentData[1]))
+                            {
+                                currentData[0] = is_signX == true ? currentData[0] - signX : currentData[0] + signX;
+                                currentData[1] = is_signY == true ? currentData[1] - signY : currentData[1] + signY;
+                                //Для одноразовых точек (шумы)
+                                if(start_checkPoint == currentData[0] + "|" + currentData[1])
+                                {
+                                    Console.WriteLine("Замкнулся1");
+                                    break;
+                                }
+                                else
+                                {
+                                    ChangeDirection(dataCoordinates);
+                                }
+                                    
+                            }
+                            //Console.WriteLine("X = " + currentData[0] + " Y = " + currentData[1]);
                         }
-                        //Console.WriteLine("X = " + currentData[0] + " Y = " + currentData[1]);
-                    }
-                    else
-                    {
-                        ChangeDirection(dataCoordinates);
+                        else
+                        {
+                            //Для замкнутых линий
+                            if (start_checkPoint == currentData[0] + "|" + currentData[1])
+                            {
+                                Console.WriteLine("Замкнулся " + " 0X = " + start_checkPointItems[0] + " 1X = " + currentData[0] + " 0Y = " + start_checkPointItems[1] + " 1Y = " + currentData[1]);
+                            }
+                            ChangeDirection(dataCoordinates);
+
+                            if (is_BlockingSearch)
+                            {
+                                is_BlockingSearch = false;
+                                is_cyrcle_while = false;
+                                break;
+                            }
+                        }
+
+                        int length_currentListLive = currentListLive.Count;
+                        for (int j = 0; j < length_currentListLive; j++)
+                        {
+                            currentListEnd.Add(currentListLive[j]);
+                        }
+                        currentListLive.Clear();
 
                         if (is_BlockingSearch)
                         {
                             is_BlockingSearch = false;
-                            is_cyrcle_while = false;
                             break;
                         }
                     }
-                    int length_currentListLive = currentListLive.Count;
-                    for (int j = 0; j < length_currentListLive; j++)
-                    {
-                        currentListEnd.Add(currentListLive[j]);
-                    }
-                    currentListLive.Clear();
-                    if (is_BlockingSearch)
-                    {
-                        is_BlockingSearch = false;
-                        break;
-                    }
                 }
-                //} else
-                //{
-                //int[] start_checkPoint_Array = start_checkPoint.Split(new char[] { '|' }).Select(x => int.Parse(x)).ToArray();//X , Y
-                //int[] result_Point = new int[2];
-                //result_Point[0] = start_checkPoint_Array[0] > currentData[0] ? start_checkPoint_Array[0] - currentData[0] : currentData[0] - start_checkPoint_Array[0];
-                //result_Point[1] = start_checkPoint_Array[1] > currentData[1] ? start_checkPoint_Array[1] - currentData[1] : currentData[1] - start_checkPoint_Array[1];
-                //if(result_Point[0] == 1 || result_Point[1] == 1)
-                //{
-                //    Console.WriteLine("Замкнулся");
-                //    break;
-                // }
-                // }
             }
         }
 
         //signX signY - значения var = -1 , +1
         public void ChangeDirection(List<string> dataCoordinates)
         {
-            //test
+
+
             //Console.WriteLine("X = " + currentData[0] + " Y = " + currentData[1]);
             bool _is_searching = false;
 
@@ -596,9 +605,10 @@ namespace SignaliEdge
                         currentData[1] = is_signY == true ? currentData[1] - signY : currentData[1] + signY;
                     }
 
-                    if (start_checkPoint == currentData[0] + "|" + currentData[1])
+                    //Для замкнутых линий
+                    if ((start_checkPointItems[0] - 1 == currentData[0] || start_checkPointItems[0] + 1 == currentData[0]) && (start_checkPointItems[1] - 1 == currentData[1] || start_checkPointItems[1] + 1 == currentData[1]))
                     {
-                        Console.WriteLine("Замкнулся");
+                        Console.WriteLine("Замкнулся " + " 0X = " + start_checkPointItems[0] + " 1X = " + currentData[0] + " 0Y = " + start_checkPointItems[1] + " 1Y = " + currentData[1]);
                         is_BlockingSearch = true;
                     }
                     _is_searching = true;
@@ -610,7 +620,6 @@ namespace SignaliEdge
             {
                 is_BlockingSearch = true;
             }
-            //
         }
 
         internal void CleanUp()
