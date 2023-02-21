@@ -115,7 +115,7 @@ namespace SignaliEdge
             {
                 //______________________________________________________________________ПРОВЕДИ РЕФАКТОРИНГ КОДА
                 double[,] n, slika;
-
+                 
 
                 n = imageHandler.GetNormalizedMatrix();
                 slika = detector.Detection(n, trbPrecision.Value);
