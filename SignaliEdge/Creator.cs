@@ -17,7 +17,7 @@ namespace SignaliEdge
         private int centerPointY = 0;
 
         private double[] values = new double[1024];
-        private int ParentFirst = 0;
+        private int? ParentFirst = 0;
 
         private List<Point> coordinates;
         Dictionary<int, ValuesDictionary> BlocksDictionary = new Dictionary<int, ValuesDictionary>();
@@ -60,15 +60,15 @@ namespace SignaliEdge
                 }
             }
 
-            //searchBackground(inputImage);
+
+            //searchBackground(inputImageinputImage);
             return BlocksDictionary;
         }
 
         //Поиск центра масс
         public Dictionary<int, ValuesDictionary> shapeCenter(Dictionary<int, DataPoints> PointMasses)
         {
-            
-            for(int itemMesses = 0; itemMesses < PointMasses.Count; itemMesses++)
+            for (int itemMesses = 0; itemMesses < PointMasses.Count; itemMesses++)
             {
                 Corners corners = new Corners();
                 coordinates = new List<Point>();
@@ -82,7 +82,7 @@ namespace SignaliEdge
                 centerPointX /= PointMasses[itemMesses].data.Count;
                 centerPointY /= PointMasses[itemMesses].data.Count;
 
-                for (int i = 0; i < PointMasses[itemMesses].data.Count; i++)
+                /*for (int i = 0; i < PointMasses[itemMesses].data.Count; i++)
                 {
                     Point point = PointMasses[itemMesses].data[i];
 
@@ -100,68 +100,138 @@ namespace SignaliEdge
 
                     if(point.X == centerPointX)
                     {
+
                         SearchCorners(point.X, point.Y, PointMasses[itemMesses].data, 'x', corners);
                     } else if(point.Y == centerPointY)
                     {
                         SearchCorners(point.X, point.Y, PointMasses[itemMesses].data, 'y', corners);
                     }
-                }
-                corners.coordinates = coordinates;
+                }*/
 
-                if (corners.coordinates.Count == 0)
-                    break;
-                try
+                /*for (int i = 0; i < PointMasses[0].data.Count; i++)
                 {
-                    Point dataLineFirst = corners.coordinates[1];
-                    Point dataLineSecond = corners.coordinates[7];
-                    Point dataLineThird = corners.coordinates[3];
-                    Point dataLineFourth = corners.coordinates[5];
+                    Console.WriteLine("X = " + PointMasses[0].data[i].X + " Y = " + PointMasses[0].data[i].Y + " ____ " + " X = " + ordered[i].X + " Y = " + ordered[i].Y); 
+                }*/
+                int x0, y0, x1, y1;
+                int factorLine = 0;
+                int counttest = 0;
 
-                    int[] dataLineCenter = new int[2] { dataLineFirst.X, dataLineSecond.Y };
-                    double d = 0;
-
-                    Point coord = new Point(dataLineSecond.X, dataLineSecond.Y);
-                    int width = dataLineThird.X - dataLineSecond.X;
-                    int height = dataLineFourth.Y - dataLineFirst.Y;
-                    int count = 0;
-
-                    //Console.WriteLine("Радиус по ширине = " + (dataLineFirst.X - dataLineSecond.X));
-                    //Console.WriteLine("Радиус по высоте = " + (dataLineSecond.Y - dataLineFirst.Y));
-
-                    for (int i = PointMasses[itemMesses].data.IndexOf(dataLineSecond); i < PointMasses[itemMesses].data.Count; i++)
+                HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
+                List<Point> _ListdataCoordinates = new List<Point>();
+                for (int i = 0; i < PointMasses[itemMesses].data.Count; i++)
+                {
+                    counttest++;
+                    if (!_HashdataCoordinates.Contains(PointMasses[itemMesses].data[i]))
                     {
-                        if(PointMasses[itemMesses].data[i] != corners.coordinates[1])
+                        _ListdataCoordinates.Clear();
+                        _HashdataCoordinates.Add(PointMasses[itemMesses].data[i]);
+                        factorLine = 0;
+
+                        x0 = PointMasses[itemMesses].data[i].X;
+                        y0 = PointMasses[itemMesses].data[i].Y;
+
+                        if (i + 1 == (PointMasses[itemMesses].data.Count)) { break; }
+
+                        x1 = PointMasses[itemMesses].data[i+1].X;
+                        y1 = PointMasses[itemMesses].data[i+1].Y;
+
+                        for (int j = 0; j < PointMasses[itemMesses].data.Count; j++)
                         {
-                            d = Math.Sqrt(Math.Pow(dataLineCenter[0] - coord.X, 2) + Math.Pow(dataLineCenter[1] - coord.Y, 2));
-                            coord = PointMasses[itemMesses].data[i];
-                            count++;
-                        } else
+                            int currentX = PointMasses[itemMesses].data[j].X;
+                            int currentY = PointMasses[itemMesses].data[j].Y;
+
+                            if (((x1 - x0) * (currentY - y0) - (y1 - y0) * (currentX - x0)) == 0)
+                            {
+                                factorLine++;
+                                _ListdataCoordinates.Add(PointMasses[itemMesses].data[j]);
+                            }
+                        }
+
+                        if (factorLine > 50)
                         {
-                            break;
+                            coordinates.Add(new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y));
+                            coordinates.Add(new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y));
+
+                            //Console.WriteLine("Первая точка = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                            for(int j = 0; j < _ListdataCoordinates.Count; j++)
+                            {
+                                _HashdataCoordinates.Add(_ListdataCoordinates[j]);
+                            }
                         }
                     }
-                    //Console.WriteLine(d-3);
-                    //Console.WriteLine(count);
-
-                    // BlocksDictionary - все блоки найденые системой
-                    BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                        dataLineSecond.X, dataLineFirst.Y,
-                        dataLineThird.X, dataLineFirst.Y,
-                        dataLineThird.X,  dataLineFourth.Y,
-                        dataLineSecond.X, dataLineFourth.Y,
-                    
-                    }, MyGlobals.g_counterKey, width, height, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, ParentFirst));
-                    MyGlobals.g_counterKey++;
                 }
-                catch { Console.WriteLine("ERROR Creater"); }
+
+                corners.coordinates = coordinates;
 
 
+
+
+
+
+                if (corners.coordinates.Count != 8)
+                {
+                    Console.WriteLine("BREAK");
+                    continue;
+                }
+
+
+                Point dataLineFirst = corners.coordinates[1];
+                Point dataLineSecond = corners.coordinates[7];
+                Point dataLineThird = corners.coordinates[3];
+                Point dataLineFourth = corners.coordinates[5];
+
+                int[] dataLineCenter = new int[2] { dataLineFirst.X, dataLineSecond.Y };
+                double d = 0;
+
+                Point coord = new Point(dataLineSecond.X, dataLineSecond.Y);
+                int width = dataLineThird.X - dataLineSecond.X;
+                int height = dataLineFourth.Y - dataLineFirst.Y;
+                int count = 0;
+
+                //Console.WriteLine("Радиус по ширине = " + (dataLineFirst.X - dataLineSecond.X));
+                //Console.WriteLine("Радиус по высоте = " + (dataLineSecond.Y - dataLineFirst.Y));
+
+                /*for (int i = PointMasses[itemMesses].data.IndexOf(dataLineSecond); i < PointMasses[itemMesses].data.Count; i++)
+                {
+                    if(PointMasses[itemMesses].data[i] != corners.coordinates[1])
+                    {
+                        d = Math.Sqrt(Math.Pow(dataLineCenter[0] - coord.X, 2) + Math.Pow(dataLineCenter[1] - coord.Y, 2));
+                        coord = PointMasses[itemMesses].data[i];
+                        count++;
+                    } else
+                    {
+                        break;
+                    }
+                }*/
+                //Console.WriteLine(d-3);
+                //Console.WriteLine(count);
+
+                // BlocksDictionary - все блоки найденые системой
+                BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
+                    dataLineSecond.X, dataLineFirst.Y,
+                    dataLineThird.X, dataLineFirst.Y,
+                    dataLineThird.X,  dataLineFourth.Y,
+                    dataLineSecond.X, dataLineFourth.Y,
+                    
+                }, MyGlobals.g_counterKey, width, height, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, ParentFirst));
+                MyGlobals.g_counterKey++;
             }
 
+            //Создание первого элемента body
+            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
+                0, 0,
+                MyGlobals.g_inputImage.Width - 1, 0,
+                MyGlobals.g_inputImage.Width - 1,  MyGlobals.g_inputImage.Height - 1,
+                0, MyGlobals.g_inputImage.Height - 1,
+            }, MyGlobals.g_counterKey, MyGlobals.g_inputImage.Width - 1, MyGlobals.g_inputImage.Height - 1, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, null));
 
+            MyGlobals.g_counterKey++;
             return BlocksDictionary;
 
         }
+
+
+
 
         private void SearchCorners(int x, int y, List<Point> PointMasses, char depend, Corners corners)
         {

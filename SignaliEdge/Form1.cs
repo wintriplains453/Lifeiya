@@ -25,9 +25,8 @@ namespace SignaliEdge
         private Mat mainModelImage = null;
         private Image<Bgr, byte> inputImage;
         private Image<Bgr, byte> TakeImage;
-        private Image<Gray, byte> GrayImage;
-        private List<Point> dataCoordinates = new List<Point>();
 
+        private List<Point> _dataCoordinates = new List<Point>();
         private List<Point> dataCoordinates2 = new List<Point>();
         Dictionary<int, ValuesDictionary> BlocksDictionary = new Dictionary<int, ValuesDictionary>();
         Dictionary<int, PropertyCSS> BlocksDictionaryCSS = new Dictionary<int, PropertyCSS>();
@@ -41,6 +40,12 @@ namespace SignaliEdge
         readonly RenderStyles renderer = new RenderStyles();
         readonly TextRecognition textRecognition = new TextRecognition();
         readonly CreateHTML createHTML = new CreateHTML();
+
+        private int _xPos;
+        private int _yPos;
+        private bool _dragging;
+        private int _counter_weel = 0;
+        private int _height_image;
 
         public Form1()
         {
@@ -56,6 +61,11 @@ namespace SignaliEdge
             detector.LowerTreshold = lower;
             detector.UpperTreshold = upper;
             detector.MaxPrecision = false;
+
+            pbSlika.MouseWheel += pbSlika_MouseWheel;
+            pbSlika.MouseUp += pbSlika_MousUp;
+            pbSlika.MouseDown += pbSlika_MousDown;
+            pbSlika.MouseMove += pbSlika_MousMove;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -74,16 +84,13 @@ namespace SignaliEdge
 
 
             imageHandler.StartBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
+            imageHandler.OriginalBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
+            imageHandler.CurrentBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
             //imageHandler.SetNewImage();
-            imageHandler.CurrentBitmap = imageHandler.StartBitmap;
-            imageHandler.OriginalBitmap = imageHandler.StartBitmap;
 
             inputImage = new Image<Bgr, byte>(fdIzborSlike.FileName);
-            imageHandler.BitmapPath = fdIzborSlike.FileName;
-            GrayImage = inputImage.Convert<Gray, Byte>();
 
-
-            pbSlikaOriginal.Image = inputImage.Bitmap; //imageHandler.OriginalBitmap -  resultImage.Bitmap
+            pbSlikaOriginal.Image = imageHandler.OriginalBitmap; //imageHandler.OriginalBitmap -  resultImage.Bitmap
             lblImageResolution.Text = pbSlikaOriginal.Image.Width.ToString() + "x" + pbSlikaOriginal.Image.Height.ToString();
             lblImageSize.Text = Math.Round((new FileInfo(fdIzborSlike.FileName).Length/1000000.0), 2).ToString() + "MB";
         }
@@ -115,57 +122,93 @@ namespace SignaliEdge
             {
                 //______________________________________________________________________ПРОВЕДИ РЕФАКТОРИНГ КОДА
                 double[,] n, slika;
-                 
 
-                n = imageHandler.GetNormalizedMatrix();
-                slika = detector.Detection(n, trbPrecision.Value);
-                imageHandler.DenormalizeCurrent(slika, dataCoordinates);
-                detector.ContoursList(dataCoordinates);
+                _height_image = 0;
+                MyGlobals.g_const_height_img = inputImage.Height;
+                //for (int i = 0; i < 2; i++)
+                //{
+                    n = imageHandler.GetNormalizedMatrix(_height_image);
+                    slika = detector.Detection(n, trbPrecision.Value);
+                    imageHandler.DenormalizeCurrent(slika, _dataCoordinates, _height_image);
+                    //_height_image += MyGlobals.g_const_height_img;
+                    //MyGlobals.keycount = MyGlobals.keycount + 750;
+                //}
+                //Распознование контуров
+                detector.ContoursList(_dataCoordinates);
+
+                //
+                MyGlobals.g_inputImage = inputImage;
                 BlocksDictionary = creator.shapeCenter(detector.currentListDictionary);
-                BlocksDictionary = creator.FilterDictionary(BlocksDictionary, GrayImage.Bitmap);
+
+                //
+                BlocksDictionary = creator.FilterDictionary(BlocksDictionary, inputImage.Convert<Gray, Byte>().Bitmap);
+                //Поиск незамкнутых линий разделителей
+                detector.FilterIncompleteLines(BlocksDictionary);
                 //hTMLDOM.HTMLCompletion(BlocksDictionary);
                 //textDictionary = textRecognition.RecognizerText(BlocksDictionary, inputImage, fdIzborSlike.FileName);
 
-                //Renders
+                //Отрисовка
                 createHTML.CreateDOM(BlocksDictionary);
                 renderer.RenderCSS(BlocksDictionary);
                 try
                 {
-                    foreach (var elem in BlocksDictionary.Values)
-                    {
-                        Point[] rect = new Point[]
+                    //foreach(var offset in MyGlobals.g_dataCoordinate_style)
+                    //{
+                        foreach (var elem in BlocksDictionary.Values)
                         {
-                            new Point(elem.PointsArea[0], elem.PointsArea[1]),
-                            new Point(elem.PointsArea[2], elem.PointsArea[3]),
-                            new Point(elem.PointsArea[4], elem.PointsArea[5]),
-                            new Point(elem.PointsArea[6], elem.PointsArea[7]),
+                            Point[] rect = new Point[]
+                            {
+                                new Point(elem.PointsArea[0], elem.PointsArea[1]),
+                                new Point(elem.PointsArea[2], elem.PointsArea[3]),
+                                new Point(elem.PointsArea[4], elem.PointsArea[5]),
+                                new Point(elem.PointsArea[6], elem.PointsArea[7]),
 
-                        };
-                        using (VectorOfPoint vp = new VectorOfPoint(rect))
-                        {
-                            CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 20);
+                            };
+                            using (VectorOfPoint vp = new VectorOfPoint(rect))
+                            {
+                                CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 1);
+                            }
+
                         }
-
-                    }
-                    foreach (var elem in textDictionary.Values)
-                    {
-                        Point[] Text = new Point[]
+                        foreach (var elem in textDictionary.Values)
                         {
-                                new Point(elem.TextPoints[0], elem.TextPoints[1]),
-                                new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1]),
-                                new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1] + elem.height),
-                                new Point(elem.TextPoints[0], elem.TextPoints[1] + elem.height),
+                            Point[] Text = new Point[]
+                            {
+                                    new Point(elem.TextPoints[0], elem.TextPoints[1]),
+                                    new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1]),
+                                    new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1] + elem.height),
+                                    new Point(elem.TextPoints[0], elem.TextPoints[1] + elem.height),
 
-                        };
-                        using (VectorOfPoint vm = new VectorOfPoint(Text))
-                        {
-                            CvInvoke.Polylines(inputImage, vm, true, new MCvScalar(0, 136, 248, 255), 15);
+                            };
+                            using (VectorOfPoint vm = new VectorOfPoint(Text))
+                            {
+                                CvInvoke.Polylines(inputImage, vm, true, new MCvScalar(0, 136, 248, 255), 2);
+                            }
                         }
-                    }
-                    /*foreach (var item in dataCoordinates2)
-                    {
-                        inputImage[item.Y, item.X] = new Bgr(0, 0, 255);
-                    }*/
+                        /*foreach (var item in detector.currentListDictionary.Values)
+                        {
+                            foreach(var data in item.data)
+                            {
+                                inputImage[data.Y, data.X] = new Bgr(0, 0, 255);
+                            }
+                        }*/
+                        foreach(var elem in MyGlobals.test.Values)
+                        {
+                            Point[] rect = new Point[]
+    {
+                                new Point(elem.PointsArea[0], elem.PointsArea[1]),
+                                new Point(elem.PointsArea[2], elem.PointsArea[3]),
+                                new Point(elem.PointsArea[4], elem.PointsArea[5]),
+                                new Point(elem.PointsArea[6], elem.PointsArea[7]),
+
+    };
+                            using (VectorOfPoint vp = new VectorOfPoint(rect))
+                            {
+                                CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(27, 255, 15, 255), 2);
+                            }
+                        }
+                   // }
+                   
                 } catch
                 {
 
@@ -173,7 +216,7 @@ namespace SignaliEdge
                 n = null;
                 slika = null;
                 //Y ___ X
-                
+
                 sw.Stop();
                 string elapsed = sw.Elapsed.ToString();
                 lblLastDetection.Text = elapsed.Substring(0, 11);
@@ -183,7 +226,7 @@ namespace SignaliEdge
                 GC.Collect();
 
                 //pbSlika.Image = imageHandler.CurrentBitmap;
-                //pbSlika.Image = inputImage.Bitmap;
+                pbSlika.Image = inputImage.Bitmap;
             }
             catch (OutOfMemoryException)
             {
@@ -269,14 +312,68 @@ namespace SignaliEdge
                 pbSlika.Image = inputImage.Bitmap;
             }
         }
+
+        private void pbSlika_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if(e.Delta > 0)
+            {
+                pbSlika.Width += 300;
+                pbSlika.Height += 300;
+                _counter_weel++;
+            } else
+            {
+                pbSlika.Width = pbSlika.Width - 300;
+                pbSlika.Height = pbSlika.Height - 300;
+                _counter_weel = _counter_weel - 1;
+            }
+        }
+        private void pbSlika_MousUp(object sender, MouseEventArgs e)
+        {
+            var c = sender as PictureBox;
+            if (null == c) return;
+            _dragging = false;
+        }
+        private void pbSlika_MousDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            _dragging = true;
+            _xPos = e.X;
+            _yPos = e.Y;
+        }
+        private void pbSlika_MousMove(object sender, MouseEventArgs e)
+        {
+            var c = sender as PictureBox;
+            if (!_dragging || null == c) return;
+            c.Top = e.Y + c.Top - _yPos;
+            c.Left = e.X + c.Left - _xPos;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (_counter_weel == 0 && pbSlika.Top == 0 && pbSlika.Left == 0)
+                return;
+
+            pbSlika.Width -= (_counter_weel * 300);
+            pbSlika.Height -= (_counter_weel * 300);
+            pbSlika.Top = 0;
+            pbSlika.Left = 0;
+
+            _counter_weel = 0;
+        }
     }
 
     public static class MyGlobals
     {
-        public static int g_counterKey = 0;
+        internal static int g_counterKey = 0;
+        internal static Image<Bgr, byte> g_inputImage = null;
+        internal static Dictionary<int, List<Point>> g_dataCoordinate_style = new Dictionary<int, List<Point>>();
+        internal static Dictionary<int, ValuesDictionary> test = new Dictionary<int, ValuesDictionary>();
 
+        public static int keycount = 0;
         //Settings
         public static int g_length_Line_Rectangle = 50;
         public static int g_distance_Abyss = 3;
+        public static int g_length_Lines = 50;
+        public static int g_const_height_img = 0;
     }
 }

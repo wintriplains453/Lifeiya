@@ -18,11 +18,12 @@ namespace SignaliEdge
 
         public HashSet<Point> currentListEnd = new HashSet<Point>();
         private HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
+        private List<Point> _coordinatesVectors = new List<Point>();
         private byte directionContours = 0;
         private Point currentData;
         private Point start_checkPointItems;
         private Point start_checkPoint;
-        private bool is_BlockingSearch = false;
+        private bool is_Close_Search = false;
 
         private byte signX = 1;
         private byte signY = 0;
@@ -33,6 +34,10 @@ namespace SignaliEdge
         private bool _is_checkAfterAbyss = false;
         public bool MaxPrecision { get; set; }
 
+        //Словарь незамкнутых линий
+        private Dictionary<int, List<Point>> _incompleteLines = new Dictionary<int, List<Point>>();
+        private int _count_incompleteLines = 0;
+
         //Временный список
         private HashSet<Point> currentListLive = new HashSet<Point>();
         private List<Point> currentListDeath = new List<Point>();
@@ -41,7 +46,8 @@ namespace SignaliEdge
         private int DictionaryCounter = 0;
 
         //UpperTreshold = ut, LowerTreshold = lt
-        private double ut, lt;
+        private double ut = 0.002;
+        private double lt = 0.001;
         public double LowerTreshold { get; set; }
         public double UpperTreshold { get; set; }
 
@@ -92,7 +98,7 @@ namespace SignaliEdge
             return slikaIzlaz;
         }
 
-        public double[,] prosiriMatricu(double[,] matrica, int prosirenje)
+        internal double[,] prosiriMatricu(double[,] matrica, int prosirenje)
         {
             if (matrica == null) return null;
 
@@ -109,7 +115,7 @@ namespace SignaliEdge
             return vracaSe;
         }
 
-        public double[,] Detection(double[,] normSlika, int precision)
+        internal double[,] Detection(double[,] normSlika, int precision)
         {
 
             if (normSlika == null) return null;
@@ -313,7 +319,7 @@ namespace SignaliEdge
         }
 
         //dataCoordinates[x,y]
-        public void ContoursList(List<Point> dataCoordinates)
+        internal void ContoursList(List<Point> dataCoordinates)
         {
             //dataCoordinates = dataCoordinates.OrderBy(x => x.Y).ThenBy(y => y.X).ToList();
             _HashdataCoordinates.UnionWith(dataCoordinates);
@@ -335,9 +341,10 @@ namespace SignaliEdge
                     start_checkPoint = dataCoordinates[m];
                     start_checkPointItems = dataCoordinates[m];
                     directionContours = 0;
-                    is_BlockingSearch = false;
+                    is_Close_Search = false;
                     _is_checkAfterAbyss = false;
                     currentListDeath.Clear();
+                    _coordinatesVectors.Clear();
 
                     while (true)//Перебор всех точек в точках
                     {
@@ -375,7 +382,7 @@ namespace SignaliEdge
                                 DictionaryCounter++;
 
                                 //Console.WriteLine("Замкнулся " + " 0X = " + start_checkPointItems.X + " 1X = " + currentData.X + " 0Y = " + start_checkPointItems.Y + " 1Y = " + currentData.Y);
-                                is_BlockingSearch = true;
+                                is_Close_Search = true;
                             }
                             ChangeDirection();
                         }
@@ -387,7 +394,7 @@ namespace SignaliEdge
                         }
                         currentListLive.Clear();
 
-                        if (is_BlockingSearch)
+                        if (is_Close_Search)
                         {
                             break;
                         }
@@ -406,26 +413,29 @@ namespace SignaliEdge
                     if (currentListDeath.Count > MyGlobals.g_length_Line_Rectangle / 2 && !is_have_dictionary)
                     {
                         //Прямые линии
-                        //Console.WriteLine("Count = " + currentListDeath.Count + " __ " + currentListDeath[0].Y);
+                        _incompleteLines.Add(_count_incompleteLines, new List<Point>(currentListDeath));
+                        _count_incompleteLines++;
+
                     }
                     //END COMMENT
                 }
             }
 
 
-
             stopwatch.Stop();
             Console.WriteLine("Time result = " + stopwatch.Elapsed.TotalSeconds);
         }
 
-        //signX signY - значения var = -1 , +1
-        public void ChangeDirection()
+        //signX signY - значения var = -x,y , +x,y
+        internal void ChangeDirection()
         {
+            int length_distance_Abyss = currentListDeath.Count < 5 ? 1 : MyGlobals.g_distance_Abyss;
             byte signXCoopy = signX;
             byte signYCopy = signY;
-            for (int y = 1; y <= MyGlobals.g_distance_Abyss; y++)
+
+            for (int y = 1; y <= length_distance_Abyss; y++)
             {
-                for (int x = 1; x <= MyGlobals.g_distance_Abyss; x++)
+                for (int x = 1; x <= length_distance_Abyss; x++)
                 {
                     Point[] _dataPosition = new Point[8];
                     string[,] _dataPosition_direction = new string[8, 4];
@@ -440,7 +450,7 @@ namespace SignaliEdge
                             _dataPosition[3] = new Point(currentData.X, currentData.Y + y);
                             _dataPosition[4] = new Point(currentData.X - x, currentData.Y + y);
                             _dataPosition[5] = new Point(currentData.X - x, currentData.Y - y);
-                            _dataPosition[6] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[6] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[7] = new Point(currentData.X + x, currentData.Y);
 
                             _dataPosition_direction = new string[8, 4] {
@@ -461,7 +471,7 @@ namespace SignaliEdge
                             _dataPosition[2] = new Point(currentData.X, currentData.Y + y);
                             _dataPosition[3] = new Point(currentData.X - x, currentData.Y + y);
                             _dataPosition[4] = new Point(currentData.X - x, currentData.Y);
-                            _dataPosition[5] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[5] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[6] = new Point(currentData.X + x, currentData.Y - y);
                             _dataPosition[7] = new Point(currentData.X + x, currentData.Y + y);
 
@@ -504,7 +514,7 @@ namespace SignaliEdge
                             _dataPosition[1] = new Point(currentData.X, currentData.Y + y);
                             _dataPosition[2] = new Point(currentData.X - x, currentData.Y);
                             _dataPosition[3] = new Point(currentData.X - x, currentData.Y - y);
-                            _dataPosition[4] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[4] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[5] = new Point(currentData.X + x, currentData.Y);
                             _dataPosition[6] = new Point(currentData.X + x, currentData.Y + y);
                             _dataPosition[7] = new Point(currentData.X - x, currentData.Y + y);
@@ -525,7 +535,7 @@ namespace SignaliEdge
                             _dataPosition[0] = new Point(currentData.X - x, currentData.Y);
                             _dataPosition[1] = new Point(currentData.X - x, currentData.Y + y);
                             _dataPosition[2] = new Point(currentData.X - x, currentData.Y - y);
-                            _dataPosition[3] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[3] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[4] = new Point(currentData.X + x, currentData.Y - y);
                             _dataPosition[5] = new Point(currentData.X + x, currentData.Y + y);
                             _dataPosition[6] = new Point(currentData.X, currentData.Y + y);
@@ -546,7 +556,7 @@ namespace SignaliEdge
                         case 5:
                             _dataPosition[0] = new Point(currentData.X - x, currentData.Y - y);
                             _dataPosition[1] = new Point(currentData.X - x, currentData.Y);
-                            _dataPosition[2] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[2] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[3] = new Point(currentData.X + x, currentData.Y - y);
                             _dataPosition[4] = new Point(currentData.X + x, currentData.Y);
                             _dataPosition[5] = new Point(currentData.X, currentData.Y + y);
@@ -566,14 +576,14 @@ namespace SignaliEdge
                             _dataPosition_directionPosition = new byte[8] { 5, 4, 6, 7, 0, 2, 3, 5 };
                             break;
                         case 6:
-                            _dataPosition[0] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[0] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[1] = new Point(currentData.X - x, currentData.Y - y);
                             _dataPosition[2] = new Point(currentData.X + x, currentData.Y - y);
                             _dataPosition[3] = new Point(currentData.X + x, currentData.Y);
                             _dataPosition[4] = new Point(currentData.X + x, currentData.Y + y);
                             _dataPosition[5] = new Point(currentData.X - x, currentData.Y + y);
                             _dataPosition[6] = new Point(currentData.X - x, currentData.Y);
-                            _dataPosition[7] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[7] = new Point(currentData.X, currentData.Y - y);
 
                             _dataPosition_direction = new string[8, 4] {
                             { "0", "1", "false", "false" },
@@ -589,7 +599,7 @@ namespace SignaliEdge
                             break;
                         case 7:
                             _dataPosition[0] = new Point(currentData.X + x, currentData.Y - y);
-                            _dataPosition[1] = new Point(currentData.X, currentData.Y - 1);
+                            _dataPosition[1] = new Point(currentData.X, currentData.Y - y);
                             _dataPosition[2] = new Point(currentData.X + x, currentData.Y);
                             _dataPosition[3] = new Point(currentData.X + x, currentData.Y + y);
                             _dataPosition[4] = new Point(currentData.X, currentData.Y + y);
@@ -613,13 +623,14 @@ namespace SignaliEdge
 
                     for (byte i = 0; i < _dataPosition.Length; i++)
                     {
-                        if(_is_checkAfterAbyss)
+                        if (_is_checkAfterAbyss)
                         {
-                            if(i == 0) 
+                            if (i == 0)
                                 continue;
                         }
                         if (_HashdataCoordinates.Contains(_dataPosition[i]) && !currentListEnd.Contains(currentData))
                         {
+                            _coordinatesVectors.Add(_dataPosition[i]);
                             signX = Convert.ToByte(_dataPosition_direction[i, 0]);
                             signY = Convert.ToByte(_dataPosition_direction[i, 1]);
 
@@ -645,7 +656,7 @@ namespace SignaliEdge
                                 currentListDictionary.Add(DictionaryCounter, new DataPoints(new List<Point>(currentListDeath)));
                                 DictionaryCounter++;
                                 //Console.WriteLine("Замкнулся " + " 0X = " + start_checkPointItems.X + " 1X = " + currentData.X + " 0Y = " + start_checkPointItems.Y + " 1Y = " + currentData.Y);
-                                is_BlockingSearch = true;
+                                is_Close_Search = true;
                                 return;
                             }
                             if (x > 1 || y > 1)
@@ -663,7 +674,82 @@ namespace SignaliEdge
                     }
                 }
             }
-            is_BlockingSearch = true;
+            /*foreach(var vector in _coordinatesVectors.ToArray())!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!Под вопросом нужности
+            {
+                currentData.X = vector.X;
+                currentData.Y = vector.Y;
+                _coordinatesVectors.Remove(vector);
+                ChangeDirection();
+            }*/
+            is_Close_Search = true;
+        }
+
+        internal void FilterIncompleteLines(Dictionary<int, ValuesDictionary> BlocksDictionary)//__________________________________переделать строку /*&^*/ отдельно для X и Y
+        {
+            if (_incompleteLines.Count == 0)
+                return;
+
+            HashSet<(int, int)> CheckingIncompleteLines = new HashSet<(int, int)>();
+
+            foreach (var item in BlocksDictionary.ToArray())
+            {
+                for (int j = 0; j < _incompleteLines.Count; j++)
+                {
+                    var largest__coordinate = _incompleteLines[j].GroupBy(x => x.Y).Select(x => new { key = x.Key, value = x.Where(xv => xv.Y == x.Key).Count() }).OrderByDescending(x => x.value).First();
+                    if (!CheckingIncompleteLines.Contains((largest__coordinate.key, largest__coordinate.value)))
+                    {
+            /*&^*/      if (item.Value.PointsArea[0] <= _incompleteLines[j][0].X && item.Value.PointsArea[2] >= _incompleteLines[j].Last().X && (item.Value.PointsArea[2] - item.Value.PointsArea[0]) - MyGlobals.g_length_Lines < _incompleteLines[j].Count)//проверка входит ли блок j в блок i по ширине
+                        {
+                            if (item.Value.PointsArea[1] <= _incompleteLines[j][0].Y && item.Value.PointsArea[5] >= _incompleteLines[j].Last().Y)//проверка входит ли блок j в блок i по высоте
+                            {
+                                Console.WriteLine(largest__coordinate.value + " = value" + " _incompleteLines/2 = " + (_incompleteLines[j].Count - 10) + " key = " + largest__coordinate.key);
+                                //Если найденное наибольшее число прямой встречается больше чем половина прямой, то выполнять условие
+                                if (largest__coordinate.value > _incompleteLines[j].Count - 10)
+                                {
+                                    //дели по Y
+                                    //BlocksDictionary.Remove(item.Key);
+                                    if(largest__coordinate.key < item.Value.height/2)
+                                    {
+                                        BlocksDictionaryAdding(largest__coordinate.key, item, false, BlocksDictionary);
+                                        CheckingIncompleteLines.Add((largest__coordinate.key, largest__coordinate.value));
+                                    } else
+                                    {
+                                        BlocksDictionaryAdding(largest__coordinate.key, item, true, BlocksDictionary);
+                                        CheckingIncompleteLines.Add((largest__coordinate.key, largest__coordinate.value));
+                                    }
+                                } else
+                                {
+                                    //дели по X
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+
+        internal void BlocksDictionaryAdding(int largest__oordinate, KeyValuePair<int, ValuesDictionary> item, bool is_more, Dictionary<int, ValuesDictionary> BlocksDictionary)
+        {
+            int heightY = is_more ? item.Value.PointsArea[1] - largest__oordinate: largest__oordinate - item.Value.PointsArea[1];
+
+            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
+                item.Value.PointsArea[0], !is_more ? item.Value.PointsArea[1] : largest__oordinate,
+                item.Value.PointsArea[2], !is_more ? item.Value.PointsArea[3] : largest__oordinate,
+                item.Value.PointsArea[4], is_more ? item.Value.PointsArea[5] : largest__oordinate,
+                item.Value.PointsArea[6], is_more ? item.Value.PointsArea[7] : largest__oordinate,
+
+            }, MyGlobals.g_counterKey, item.Value.width, heightY, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, item.Value.ParentFirst));
+            MyGlobals.test.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
+                item.Value.PointsArea[0], !is_more ? item.Value.PointsArea[1] : largest__oordinate,
+                item.Value.PointsArea[2], !is_more ? item.Value.PointsArea[3] : largest__oordinate,
+                item.Value.PointsArea[4], is_more ? item.Value.PointsArea[5] : largest__oordinate,
+                item.Value.PointsArea[6], is_more ? item.Value.PointsArea[7] : largest__oordinate,
+
+            }, MyGlobals.g_counterKey, item.Value.width, heightY, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, item.Value.ParentFirst));
+            MyGlobals.g_counterKey++;
+
+
         }
 
         internal void CleanUp()
@@ -683,9 +769,9 @@ namespace SignaliEdge
 
     class DataPoints
     {
-        public List<Point> data { get; set; }
+        internal List<Point> data { get; set; }
 
-        public DataPoints(List<Point> data)
+        internal DataPoints(List<Point> data)
         {
             this.data = data;
         }

@@ -16,12 +16,12 @@ namespace SignaliEdge
         public Dictionary<int, BlocksTextP> BlockTextP { get; set; }//99 - значение текста
         public int width { get; set; }
         public int height { get; set; }
-        public int ParentFirst { get; set; }
+        public int? ParentFirst { get; set; }
         public string structure { get; set; }
         public List<int> FirstChild { get; set; }
         public int CountFirstChild { get; set; }
 
-        public ValuesDictionary(bool displayName, List<int> pointsArea, int ID, int width, int height, string structure, Dictionary<int, Blocks> Children, Dictionary<int, BlocksTextP> BlockTextP, int ParentFirst)
+        public ValuesDictionary(bool displayName, List<int> pointsArea, int ID, int width, int height, string structure, Dictionary<int, Blocks> Children, Dictionary<int, BlocksTextP> BlockTextP, int? ParentFirst)
         {
             Nestled = displayName;
             PointsArea = pointsArea;

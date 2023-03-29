@@ -10,7 +10,6 @@ namespace SignaliEdge
 {
     public class ImageHandler
     {
-        private string _bitmapPath;
         private Bitmap _currentBitmap;
         private Bitmap _originalBitmap;
         private Bitmap _startBitmap;
@@ -57,15 +56,6 @@ namespace SignaliEdge
         {
             get { return _startBitmap; }
             set { _startBitmap = value; isGrayscale = false; }
-        }
-
-        /// <summary>
-        /// Path to the image being processed
-        /// </summary>
-        public string BitmapPath
-        {
-            get { return _bitmapPath; }
-            set { _bitmapPath = value; }
         }
 
         public byte GetBitsPerPixel(PixelFormat pf)
@@ -236,15 +226,15 @@ namespace SignaliEdge
         /// Returns the normalized version of original bitmap
         /// </summary>
         /// <returns>Matrix of doubles between 0s and 1s</returns>
-        public unsafe double[,] GetNormalizedMatrix()
+        public unsafe double[,] GetNormalizedMatrix(int startY)
         {
             if (_originalBitmap == null) return null;
 
-            BitmapData bData = _originalBitmap.LockBits(new Rectangle(0, 0, _originalBitmap.Width, _originalBitmap.Height), ImageLockMode.ReadWrite, _originalBitmap.PixelFormat);
+            BitmapData bData = _originalBitmap.LockBits(new Rectangle(0, startY, _originalBitmap.Width, MyGlobals.g_const_height_img), ImageLockMode.ReadWrite, _originalBitmap.PixelFormat);
             bitsPerPixel = GetBitsPerPixel(bData.PixelFormat);
             byte* scan0 = (byte*)bData.Scan0.ToPointer();
 
-            var normalizedMatrix = new double[_originalBitmap.Width, _originalBitmap.Height];
+            var normalizedMatrix = new double[_originalBitmap.Width, MyGlobals.g_const_height_img];
 
             byte* data;
             for (int i = 0; i < bData.Height; ++i)
@@ -269,19 +259,21 @@ namespace SignaliEdge
         /// Passed matrix consists only of 0s and 1s.
         /// </summary>
         /// <param name="norm">Matrix with values between 0 and 1</param>
-        public unsafe void DenormalizeCurrent(double[,] norm, List<Point> dataCoordinates)
+        public unsafe void DenormalizeCurrent(double[,] norm, List<Point> dataCoordinates, int startY)
         {
+            List<Point> style_dataCoordinates = new List<Point>();
+
             if (norm == null) return;
             int n = norm.GetLength(0);
             int m = norm.GetLength(1);
 
-            if (m != _currentBitmap.Height || n != _currentBitmap.Width)
+            if (m != MyGlobals.g_const_height_img || n != _currentBitmap.Width)
             {
                 throw new Exception("Sizes don't match.");
             }
 
 
-            BitmapData bData = _currentBitmap.LockBits(new Rectangle(0, 0, _currentBitmap.Width, _currentBitmap.Height), ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
+            BitmapData bData = _currentBitmap.LockBits(new Rectangle(0, startY, _currentBitmap.Width, MyGlobals.g_const_height_img), ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
             bitsPerPixel = GetBitsPerPixel(bData.PixelFormat);
             byte* scan0 = (byte*)bData.Scan0.ToPointer();
 
@@ -293,9 +285,10 @@ namespace SignaliEdge
                     data = scan0 + i * bData.Stride + j * bitsPerPixel / 8;
 
                     byte newCol = norm[j, i] == 0 ? (byte)0 : (byte)255;
-                    if (norm[j, i] != 0)
+                    if (norm[j, i] != 0 && i != bData.Height - 1 && i != 0)
                     {
-                        dataCoordinates.Add(new Point(j, i));
+                        dataCoordinates.Add(new Point(j, i + MyGlobals.keycount));
+                        style_dataCoordinates.Add(new Point(j, i));
                     }
                     if (bitsPerPixel >= 24)
                     {
@@ -311,6 +304,7 @@ namespace SignaliEdge
                 }
             }
 
+            //MyGlobals.g_dataCoordinate_style.Add(startY, style_dataCoordinates);
             _currentBitmap.UnlockBits(bData);
         }
 
@@ -322,7 +316,6 @@ namespace SignaliEdge
             _startBitmap = null;
             isGrayscale = false;
             bitsPerPixel = 0;
-            _bitmapPath = "";
             GC.Collect();
         }
 

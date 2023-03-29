@@ -28,11 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.pbSlika = new System.Windows.Forms.PictureBox();
             this.fdIzborSlike = new System.Windows.Forms.OpenFileDialog();
             this.trbLower = new System.Windows.Forms.TrackBar();
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.pbSlikaOriginal = new System.Windows.Forms.PictureBox();
             this.trbUpper = new System.Windows.Forms.TrackBar();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
@@ -57,31 +54,22 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.button2 = new System.Windows.Forms.Button();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
-            ((System.ComponentModel.ISupportInitialize)(this.pbSlika)).BeginInit();
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.pbSlikaOriginal = new System.Windows.Forms.PictureBox();
+            this.pbSlika = new System.Windows.Forms.PictureBox();
+            this.button3 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.trbLower)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trbUpper)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trbPrecision)).BeginInit();
+            this.ssInfo.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
             this.splitContainer1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbSlikaOriginal)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trbUpper)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trbPrecision)).BeginInit();
-            this.ssInfo.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbSlika)).BeginInit();
             this.SuspendLayout();
-            // 
-            // pbSlika
-            // 
-            this.pbSlika.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pbSlika.InitialImage = null;
-            this.pbSlika.Location = new System.Drawing.Point(3, 0);
-            this.pbSlika.Name = "pbSlika";
-            this.pbSlika.Size = new System.Drawing.Size(405, 296);
-            this.pbSlika.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pbSlika.TabIndex = 0;
-            this.pbSlika.TabStop = false;
             // 
             // fdIzborSlike
             // 
@@ -96,39 +84,6 @@
             this.trbLower.TabIndex = 1;
             this.trbLower.TickStyle = System.Windows.Forms.TickStyle.TopLeft;
             this.trbLower.Scroll += new System.EventHandler(this.trbLower_Scroll);
-            // 
-            // splitContainer1
-            // 
-            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.splitContainer1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.splitContainer1.Location = new System.Drawing.Point(12, 205);
-            this.splitContainer1.Name = "splitContainer1";
-            // 
-            // splitContainer1.Panel1
-            // 
-            this.splitContainer1.Panel1.Controls.Add(this.pbSlikaOriginal);
-            // 
-            // splitContainer1.Panel2
-            // 
-            this.splitContainer1.Panel2.Controls.Add(this.pbSlika);
-            this.splitContainer1.Size = new System.Drawing.Size(827, 301);
-            this.splitContainer1.SplitterDistance = 410;
-            this.splitContainer1.TabIndex = 2;
-            // 
-            // pbSlikaOriginal
-            // 
-            this.pbSlikaOriginal.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.pbSlikaOriginal.InitialImage = null;
-            this.pbSlikaOriginal.Location = new System.Drawing.Point(3, 3);
-            this.pbSlikaOriginal.Name = "pbSlikaOriginal";
-            this.pbSlikaOriginal.Size = new System.Drawing.Size(402, 293);
-            this.pbSlikaOriginal.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pbSlikaOriginal.TabIndex = 0;
-            this.pbSlikaOriginal.TabStop = false;
             // 
             // trbUpper
             // 
@@ -351,11 +306,69 @@
             this.checkBox1.UseVisualStyleBackColor = true;
             this.checkBox1.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged);
             // 
+            // splitContainer1
+            // 
+            this.splitContainer1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.splitContainer1.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.splitContainer1.Location = new System.Drawing.Point(8, 229);
+            this.splitContainer1.Name = "splitContainer1";
+            // 
+            // splitContainer1.Panel1
+            // 
+            this.splitContainer1.Panel1.Controls.Add(this.pbSlikaOriginal);
+            // 
+            // splitContainer1.Panel2
+            // 
+            this.splitContainer1.Panel2.Controls.Add(this.pbSlika);
+            this.splitContainer1.Size = new System.Drawing.Size(827, 286);
+            this.splitContainer1.SplitterDistance = 414;
+            this.splitContainer1.TabIndex = 21;
+            // 
+            // pbSlikaOriginal
+            // 
+            this.pbSlikaOriginal.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbSlikaOriginal.InitialImage = null;
+            this.pbSlikaOriginal.Location = new System.Drawing.Point(3, 3);
+            this.pbSlikaOriginal.Name = "pbSlikaOriginal";
+            this.pbSlikaOriginal.Size = new System.Drawing.Size(406, 278);
+            this.pbSlikaOriginal.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbSlikaOriginal.TabIndex = 0;
+            this.pbSlikaOriginal.TabStop = false;
+            // 
+            // pbSlika
+            // 
+            this.pbSlika.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbSlika.InitialImage = null;
+            this.pbSlika.Location = new System.Drawing.Point(3, -1);
+            this.pbSlika.Name = "pbSlika";
+            this.pbSlika.Size = new System.Drawing.Size(401, 281);
+            this.pbSlika.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbSlika.TabIndex = 0;
+            this.pbSlika.TabStop = false;
+            // 
+            // button3
+            // 
+            this.button3.Location = new System.Drawing.Point(496, 12);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(102, 23);
+            this.button3.TabIndex = 22;
+            this.button3.Text = "Default Zoom";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(851, 540);
+            this.Controls.Add(this.button3);
+            this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.checkBox1);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.pictureBox1);
@@ -373,41 +386,36 @@
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.trbUpper);
-            this.Controls.Add(this.splitContainer1);
             this.Controls.Add(this.trbLower);
             this.Name = "Form1";
             this.Text = "Edge Detector";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
             this.Load += new System.EventHandler(this.Form1_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.pbSlika)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trbLower)).EndInit();
-            this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
-            this.splitContainer1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.pbSlikaOriginal)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trbUpper)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trbPrecision)).EndInit();
             this.ssInfo.ResumeLayout(false);
             this.ssInfo.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
+            this.splitContainer1.Panel1.ResumeLayout(false);
+            this.splitContainer1.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
+            this.splitContainer1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pbSlikaOriginal)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbSlika)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
         }
 
         #endregion
-
-        private System.Windows.Forms.PictureBox pbSlika;
         private System.Windows.Forms.OpenFileDialog fdIzborSlike;
         private System.Windows.Forms.TrackBar trbLower;
-        private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.TrackBar trbUpper;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Button btnFileDialog;
         private System.Windows.Forms.Button btnDetect;
-        private System.Windows.Forms.PictureBox pbSlikaOriginal;
         private System.Windows.Forms.Label lblLowerTreshold;
         private System.Windows.Forms.Label lblUpperTreshold;
         private System.Windows.Forms.CheckBox cbCalcTresholds;
@@ -427,6 +435,10 @@
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.PictureBox pbSlikaOriginal;
+        private System.Windows.Forms.PictureBox pbSlika;
+        private System.Windows.Forms.Button button3;
     }
 }
 

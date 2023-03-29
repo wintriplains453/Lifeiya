@@ -102,7 +102,7 @@ namespace SignaliEdge
             {
                 if (item.Children.Count == 0 && item.ParentFirst == 0)
                 {
-                    blocksHTML.Insert(LineCounterHTML, $"{" ".PadLeft(2)}<div class=\"defaultBlock{item.width}\"></div>");
+                    blocksHTML.Insert(LineCounterHTML, $"{" ".PadLeft(2)}<div class=\"defaultBlock{item.height}\"></div>");
                     LineCounterHTML++;
                 }
                 else
@@ -157,7 +157,7 @@ namespace SignaliEdge
                     item.Nestled = true;
                     if (item.structure.Length == 0)
                     {
-                        blocksHTML.Insert(LineCounterHTML, item.structure = $"{spacing}<div class=\"defaultBlock{item.ID}\">");
+                        blocksHTML.Insert(LineCounterHTML, item.structure = $"{spacing}<div class=\"defaultBlock{item.height}\">");
                     }
                     else
                     {
@@ -199,7 +199,7 @@ namespace SignaliEdge
                                 spacing = " ".PadLeft(4 * (newCount + 1) - 1);
                                 if (BlocksDictionary[child].structure.Length == 0)
                                 {
-                                    BlocksDictionary[child].structure = $"{spacing}<div class=\"defaultBlock{BlocksDictionary[child].ID}\"></div>";
+                                    BlocksDictionary[child].structure = $"{spacing}<div class=\"defaultBlock{BlocksDictionary[child].height}\"></div>";
                                 }
                                 else
                                 {
