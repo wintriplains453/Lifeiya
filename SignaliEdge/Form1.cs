@@ -27,7 +27,6 @@ namespace SignaliEdge
         private Image<Bgr, byte> TakeImage;
 
         private List<Point> _dataCoordinates = new List<Point>();
-        private List<Point> dataCoordinates2 = new List<Point>();
         Dictionary<int, ValuesDictionary> BlocksDictionary = new Dictionary<int, ValuesDictionary>();
         Dictionary<int, PropertyCSS> BlocksDictionaryCSS = new Dictionary<int, PropertyCSS>();
         Dictionary<int, TextDictionary> textDictionary = new Dictionary<int, TextDictionary>();
@@ -83,14 +82,15 @@ namespace SignaliEdge
             if (imageHandler.OriginalBitmap != null) imageHandler.OriginalBitmap.Dispose();
 
 
-            imageHandler.StartBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
             imageHandler.OriginalBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
             imageHandler.CurrentBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
-            //imageHandler.SetNewImage();
+
+            imageHandler.SetGrayscale();
+            imageHandler.SetNewImage();
 
             inputImage = new Image<Bgr, byte>(fdIzborSlike.FileName);
 
-            pbSlikaOriginal.Image = imageHandler.OriginalBitmap; //imageHandler.OriginalBitmap -  resultImage.Bitmap
+            pbSlikaOriginal.Image = imageHandler.CurrentBitmap; //imageHandler.OriginalBitmap -  resultImage.Bitmap
             lblImageResolution.Text = pbSlikaOriginal.Image.Width.ToString() + "x" + pbSlikaOriginal.Image.Height.ToString();
             lblImageSize.Text = Math.Round((new FileInfo(fdIzborSlike.FileName).Length/1000000.0), 2).ToString() + "MB";
         }
@@ -120,36 +120,31 @@ namespace SignaliEdge
 
             try
             {
-                //______________________________________________________________________ПРОВЕДИ РЕФАКТОРИНГ КОДА
                 double[,] n, slika;
 
-                _height_image = 0;
                 MyGlobals.g_const_height_img = inputImage.Height;
-                //for (int i = 0; i < 2; i++)
-                //{
-                    n = imageHandler.GetNormalizedMatrix(_height_image);
-                    slika = detector.Detection(n, trbPrecision.Value);
-                    imageHandler.DenormalizeCurrent(slika, _dataCoordinates, _height_image);
-                    //_height_image += MyGlobals.g_const_height_img;
-                    //MyGlobals.keycount = MyGlobals.keycount + 750;
-                //}
+                n = imageHandler.GetNormalizedMatrix();
+                slika = detector.Detection(n, trbPrecision.Value);
+                imageHandler.DenormalizeCurrent(slika, _dataCoordinates);
+
                 //Распознование контуров
-                detector.ContoursList(_dataCoordinates);
+                //detector.ContoursList(_dataCoordinates);
 
                 //
                 MyGlobals.g_inputImage = inputImage;
-                BlocksDictionary = creator.shapeCenter(detector.currentListDictionary);
+                //BlocksDictionary = creator.shapeCenter(detector.currentListDictionary);
 
                 //
-                BlocksDictionary = creator.FilterDictionary(BlocksDictionary, inputImage.Convert<Gray, Byte>().Bitmap);
+                //BlocksDictionary = creator.FilterDictionary(BlocksDictionary, inputImage.Convert<Gray, Byte>().Bitmap);
                 //Поиск незамкнутых линий разделителей
-                detector.FilterIncompleteLines(BlocksDictionary);
+                //creator.FilterIncompleteLines(BlocksDictionary, detector.incompleteLines);
+
                 //hTMLDOM.HTMLCompletion(BlocksDictionary);
                 //textDictionary = textRecognition.RecognizerText(BlocksDictionary, inputImage, fdIzborSlike.FileName);
 
                 //Отрисовка
-                createHTML.CreateDOM(BlocksDictionary);
-                renderer.RenderCSS(BlocksDictionary);
+                //createHTML.CreateDOM(BlocksDictionary);
+                //renderer.RenderCSS(BlocksDictionary);
                 try
                 {
                     //foreach(var offset in MyGlobals.g_dataCoordinate_style)
@@ -158,27 +153,25 @@ namespace SignaliEdge
                         {
                             Point[] rect = new Point[]
                             {
-                                new Point(elem.PointsArea[0], elem.PointsArea[1]),
-                                new Point(elem.PointsArea[2], elem.PointsArea[3]),
-                                new Point(elem.PointsArea[4], elem.PointsArea[5]),
-                                new Point(elem.PointsArea[6], elem.PointsArea[7]),
+                                elem.PointsArea[0],
+                                elem.PointsArea[1],
+                                elem.PointsArea[2],
+                                elem.PointsArea[3],
 
                             };
                             using (VectorOfPoint vp = new VectorOfPoint(rect))
                             {
                                 CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 1);
                             }
-
                         }
                         foreach (var elem in textDictionary.Values)
                         {
                             Point[] Text = new Point[]
                             {
-                                    new Point(elem.TextPoints[0], elem.TextPoints[1]),
-                                    new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1]),
-                                    new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1] + elem.height),
-                                    new Point(elem.TextPoints[0], elem.TextPoints[1] + elem.height),
-
+                                new Point(elem.TextPoints[0], elem.TextPoints[1]),
+                                new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1]),
+                                new Point(elem.TextPoints[0] + elem.width, elem.TextPoints[1] + elem.height),
+                                new Point(elem.TextPoints[0], elem.TextPoints[1] + elem.height),
                             };
                             using (VectorOfPoint vm = new VectorOfPoint(Text))
                             {
@@ -195,13 +188,13 @@ namespace SignaliEdge
                         foreach(var elem in MyGlobals.test.Values)
                         {
                             Point[] rect = new Point[]
-    {
-                                new Point(elem.PointsArea[0], elem.PointsArea[1]),
-                                new Point(elem.PointsArea[2], elem.PointsArea[3]),
-                                new Point(elem.PointsArea[4], elem.PointsArea[5]),
-                                new Point(elem.PointsArea[6], elem.PointsArea[7]),
+                            {
+                                elem.PointsArea[0],
+                                elem.PointsArea[1],
+                                elem.PointsArea[2],
+                                elem.PointsArea[3],
 
-    };
+                            };
                             using (VectorOfPoint vp = new VectorOfPoint(rect))
                             {
                                 CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(27, 255, 15, 255), 2);
@@ -216,6 +209,10 @@ namespace SignaliEdge
                 n = null;
                 slika = null;
                 //Y ___ X
+                //inputImage[102, 6] = new Bgr(0, 0, 255);
+                //inputImage[102, 509] = new Bgr(0, 0, 255);
+
+
 
                 sw.Stop();
                 string elapsed = sw.Elapsed.ToString();
@@ -375,5 +372,8 @@ namespace SignaliEdge
         public static int g_distance_Abyss = 3;
         public static int g_length_Lines = 50;
         public static int g_const_height_img = 0;
+        public static int g_boder_length = 10;
+        //Clear image settings
+        public static int g_list_count_more = 6;
     }
 }

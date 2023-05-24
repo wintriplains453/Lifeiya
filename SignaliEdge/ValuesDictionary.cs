@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 
@@ -8,7 +9,7 @@ namespace SignaliEdge
     class ValuesDictionary
     {
         public bool Nestled { get; set; }
-        public List<int> PointsArea { get; private set; }
+        public List<Point> PointsArea { get; private set; }
         public int ID { get; private set; }
         public List<int> ParentArea { get; private set; }
         public int ParentArr { get; set; }
@@ -21,7 +22,7 @@ namespace SignaliEdge
         public List<int> FirstChild { get; set; }
         public int CountFirstChild { get; set; }
 
-        public ValuesDictionary(bool displayName, List<int> pointsArea, int ID, int width, int height, string structure, Dictionary<int, Blocks> Children, Dictionary<int, BlocksTextP> BlockTextP, int? ParentFirst)
+        public ValuesDictionary(bool displayName, List<Point> pointsArea, int ID, int width, int height, string structure, Dictionary<int, Blocks> Children, Dictionary<int, BlocksTextP> BlockTextP, int? ParentFirst)
         {
             Nestled = displayName;
             PointsArea = pointsArea;

@@ -12,20 +12,22 @@ namespace SignaliEdge
     {
         private Bitmap _currentBitmap;
         private Bitmap _originalBitmap;
-        private Bitmap _startBitmap;
+
+        private List<ItemPixel> _fullABS = new List<ItemPixel>();
+        private List<string> _all_reference_elems = new List<string>();
+        private int _reference_count = 0;
+
         private bool isGrayscale = false;
         byte bitsPerPixel;
         private double[,] data_copy;
 
-        private Dictionary<int, CheckData> Checking = new Dictionary<int, CheckData>();
-        private int counterPixels = 0;
-
         /// <summary>
         /// Used to avoid transforming the image to grayscale more than once
         /// </summary>
-        public bool IsGrayscale { 
-            get { return isGrayscale; } 
-            private set { isGrayscale = value; } 
+        public bool IsGrayscale
+        {
+            get { return isGrayscale; }
+            private set { isGrayscale = value; }
         }
 
         /// <summary>
@@ -49,142 +51,222 @@ namespace SignaliEdge
             set { _currentBitmap = value; isGrayscale = false; }
         }
 
-        /// <summary>
-        /// Change pixels in image
-        /// </summary>
-        public Bitmap StartBitmap 
-        {
-            get { return _startBitmap; }
-            set { _startBitmap = value; isGrayscale = false; }
-        }
-
         public byte GetBitsPerPixel(PixelFormat pf)
         {
             byte BitsPerPixel;
-            switch(pf)       
-              {
-                 case PixelFormat.Format8bppIndexed:
+            switch (pf)
+            {
+                case PixelFormat.Format8bppIndexed:
                     BitsPerPixel = 8;
                     break;
-                 case PixelFormat.Format24bppRgb:
+                case PixelFormat.Format24bppRgb:
                     BitsPerPixel = 24;
                     break;
-                 case PixelFormat.Format32bppArgb:
-                 case PixelFormat.Format32bppPArgb:
+                case PixelFormat.Format32bppArgb:
+                case PixelFormat.Format32bppPArgb:
                     BitsPerPixel = 32;
                     break;
-                 default:
+                default:
                     BitsPerPixel = 0;
-                    break;      
-             }
+                    break;
+            }
             return BitsPerPixel;
         }
         public unsafe Bitmap SetNewImage()
         {
-            BitmapData bitmapData = _startBitmap.LockBits(new Rectangle(0, 0, _startBitmap.Width, _startBitmap.Height),
-                ImageLockMode.ReadWrite, _startBitmap.PixelFormat);
+            BitmapData bitmapData = _currentBitmap.LockBits(new Rectangle(0, 0, _currentBitmap.Width, _currentBitmap.Height),
+                ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
 
-            int bytesPerPixel = Bitmap.GetPixelFormatSize(_startBitmap.PixelFormat) / 8;//Размер пикселя
-            int heightInPixels = bitmapData.Height;
-            int widthInBytes = bitmapData.Width * bytesPerPixel;
-            int counter = 0;
-            List<int> arrSpecial = new List<int>();
-            data_copy = new double[_startBitmap.Height, _startBitmap.Width];
+            data_copy = new double[_currentBitmap.Width, _currentBitmap.Height];
 
-            byte* PtrFirstPixel = (byte*)bitmapData.Scan0;
-            
+            byte* PtrFirstPixel = (byte*)bitmapData.Scan0.ToPointer();
+            byte* pixel;
+
+
+            List<ItemPixel> abs = new List<ItemPixel>();
+            List<ItemReference> temporaryResult = new List<ItemReference>();
+            List<List<ItemReference>> temporaryResultEnd = new List<List<ItemReference>>();
+            List<string> arrayVisit = new List<string>();
+            byte counter = 0;
+
             //Цикл поиска
-            for (int y = 0; y < bitmapData.Height - 1; y++)
+            int stepConvolutionWidth = 6;
+            int stepConvolutionHeight = 6;
+
+            int mainHeight = bitmapData.Height;
+            int mainWidth = bitmapData.Width;
+
+            for (int i = 0; i < mainHeight; i += stepConvolutionHeight)
             {
-                byte* row = PtrFirstPixel + y * bitmapData.Stride;
-                for (int x = 0; x < bitmapData.Width; x++)
+                for (int j = 0; j < mainWidth; j += stepConvolutionWidth)
                 {
-                    byte* pixel = row + x * bytesPerPixel;
-                    if (!Checking.ContainsKey(pixel[0]))
+                    arrayVisit.Clear();
+                    abs.Clear();
+                    temporaryResult.Clear();
+                    counter = 0;
+                    int height = (j + 6);
+                    int width = (i + 6);
+
+                    stepConvolutionWidth = bitmapData.Width - j < 6 ? bitmapData.Width - j : 6;
+                    stepConvolutionHeight = bitmapData.Height - i < 6 ? bitmapData.Height - i : 6;
+
+                    //Проход по циклу с шагом 6
+                    for (int r = i; r < (i + stepConvolutionHeight); r++)
                     {
-                        Checking.Add(pixel[0], new CheckData(counterPixels));
-                    }
-                    else
-                    {
-                        foreach (var item in Checking)
+                        for (int c = j; c < (j + stepConvolutionWidth); c++)
                         {
-                            if (item.Key == pixel[0])
-                            {
-                                item.Value.counterPixels += 1;
-                            }
-                        }
+                            pixel = PtrFirstPixel + r * bitmapData.Stride + c * bitsPerPixel / 8;
 
-                    }
-                }
-            }
-            var maxValueKey = Checking.OrderByDescending(x => x.Value.counterPixels).FirstOrDefault().Value.counterPixels;
-            //Цикл порога
-            foreach (var item in Checking.ToArray())
-            {
-                if (item.Value.counterPixels < 1)//порог
-                {
-                    Checking.Remove(item.Key);
-                }
-            }
-
-
-            //Цикл замены
-            for (int y = 0; y < bitmapData.Height; y++)
-            {
-                byte* row = PtrFirstPixel + y * bitmapData.Stride;
-                for (int x = 0; x < bitmapData.Width; x++)
-                {
-                    byte* pixel = row + x * bytesPerPixel;
-                    if (!Checking.ContainsKey(pixel[0]))//проверяет пиксели которых нет в массиве data_copy (эти пиксели нужно заметить теми что в массиве)
-                    {
-                        if (!arrSpecial.Contains(pixel[0]))
-                        {
-                            arrSpecial.Add(pixel[0]);
+                            ItemPixel startPoint = new ItemPixel();
+                            startPoint.id = $"{r}|{c}";
+                            startPoint.color = pixel[0];
+                            startPoint.children = new List<ItemPixel>();
+                            startPoint.specialChildren = new List<string>();
+                            startPoint.index = counter;
                             counter++;
-                        }
-                        int max = Checking.Max(v => v.Key);
-                        byte temp = 0;
-                        foreach (var item in Checking)//перебор всего массива макимальных значений
-                        {
-                            //Console.WriteLine(item.Key);
-                            int current_color = Math.Abs(item.Key - pixel[0]);
 
-                            if (current_color <= max)
+                            for (int y = r - 1; y <= r + 1; ++y)
                             {
-                                //Console.WriteLine(item.Key);
-                                temp = (byte)item.Key;
-                                max = current_color;
-                                //Console.WriteLine("r = " + y + " c = " + x + " result r + c = " + pixel[0] + "    max = " + max);
+                                for (int x = c - 1; x <= c + 1; ++x)
+                                {
+                                    if (0 <= y && y < width && 0 <= x && x < height && (y != r || x != c))
+                                    {
+                                        byte* currentPixel = PtrFirstPixel + y * bitmapData.Stride + x * bitsPerPixel / 8;
+                                        if (startPoint.color == currentPixel[0])
+                                        {
+                                            if (y < i || y >= (i + 6) || x < j || x >= (j + 6))
+                                            {
+                                                startPoint.specialChildren.Add($"{y}|{x}");
+                                            }
+                                            else
+                                            {
+                                                ItemPixel childremnItem = new ItemPixel();
+                                                childremnItem.id = $"{y}|{x}";
+                                                childremnItem.specialChildren = new List<string>();
+
+                                                startPoint.children.Add(childremnItem);
+                                            }
+                                            //Можно улучшить код если не создавать новый ItemPixel а ссылаться на старые
+                                        }
+                                    }
+                                }
+                            }
+                            abs.Add(startPoint);
+                            _fullABS.Add(startPoint);
+                        }
+                    }
+
+                    //BFS
+                    HashSet<string> checkingVisited = new HashSet<string>();
+                    for (int a = 0; a < abs.Count; a++)
+                    {
+                        if (!arrayVisit.Contains(abs[a].id))
+                        {
+                            arrayVisit.Add(abs[a].id);
+                            List<ItemPixel> resultStride = new List<ItemPixel>();
+                            List<ItemPixel> queue = new List<ItemPixel>();
+
+                            ItemPixel s = abs[a];
+                            queue.Add(s);
+                            resultStride.Add(s);
+                            s.index_reference = _reference_count;
+
+                            for (int spc = 0; spc < s.specialChildren.Count; spc++)
+                            {
+                                if (!_all_reference_elems.Contains(s.specialChildren[spc]))
+                                {
+                                    _all_reference_elems.Add(s.specialChildren[spc]);
+                                }
+                            }
+
+                            checkingVisited.Add(s.id);
+                            while (queue.Count > 0)
+                            {
+                                int removeIndex = queue[0].index;
+                                queue.RemoveAt(0);
+
+                                foreach (var neighbor in abs[removeIndex].children)
+                                {
+                                    ItemPixel currentPixel = abs.Find(item => item.id == neighbor.id);
+                                    if (!checkingVisited.Contains(currentPixel.id))
+                                    {
+                                        for (int spc = 0; spc < currentPixel.specialChildren.Count; spc++)
+                                        {
+                                            if (!_all_reference_elems.Contains(currentPixel.specialChildren[spc]))
+                                            {
+                                                _all_reference_elems.Add(currentPixel.specialChildren[spc]);
+                                            }
+                                        }
+                                        //Console.WriteLine(currentPixel.position);
+                                        queue.Add(currentPixel);
+                                        currentPixel.index_reference = _reference_count;
+                                        arrayVisit.Add(neighbor.id);
+                                        checkingVisited.Add(currentPixel.id);
+                                        resultStride.Add(currentPixel);
+                                    }
+                                }
+                            }
+                            temporaryResult.Add(new ItemReference(_all_reference_elems, resultStride, _reference_count));
+                            _all_reference_elems.Clear();
+                            _reference_count++;
+
+                            queue = null;
+                            resultStride = null;
+                        }
+                    }
+                    temporaryResultEnd.Add(temporaryResult);
+                }
+            }
+            _all_reference_elems = null;
+            temporaryResult = null;
+            GC.Collect();
+
+            //Start clear
+            for (int item = 0; item < temporaryResultEnd.Count; item++)
+            {
+                for (int i = 0; i < temporaryResultEnd[item].Count; i++)
+                {
+                    if (temporaryResultEnd[item].Count != 1)
+                    {
+                        if (temporaryResultEnd[item][i].list.Count < MyGlobals.g_list_count_more)
+                        {
+                            if (temporaryResultEnd[item][i].refs.Count > 0)
+                            {
+                                int counter_list_length = temporaryResultEnd[item][i].list.Count;
+                                List<int> checking_length = new List<int>();
+
+                                for (int j = 0; j < temporaryResultEnd[item][i].refs.Count; j++)
+                                {
+                                    int found = _fullABS.Find(elem => elem.id == temporaryResultEnd[item][i].refs[j]).index_reference;
+                                    if (!checking_length.Contains(found))
+                                    {
+                                        for (int n = 0; n < temporaryResultEnd.Count; n++)
+                                        {
+                                            for (int m = 0; m < temporaryResultEnd[n].Count; m++)
+                                            {
+                                                if (temporaryResultEnd[n][m].index == found)
+                                                {
+                                                    checking_length.Add(found);
+                                                    counter_list_length += temporaryResultEnd[n][m].list.Count;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (counter_list_length < MyGlobals.g_list_count_more)
+                                {
+                                    //Очистка
+                                }
                             }
                         }
-                        data_copy[y,x] = temp;
-                    }
-                    else
-                    {
-                        data_copy[y, x] = pixel[0];
                     }
                 }
             }
-            _startBitmap.UnlockBits(bitmapData);
 
-            /*using (StreamWriter sw = new StreamWriter("C:\\Python\\test.txt", false, System.Text.Encoding.Default))
-            {
-                for (int i = 0; i < bitmapData.Height - 1; i++)
-                {
-                    for (int j = 0; j < bitmapData.Width - 1; j++)
-                    {
-                        if (data_copy[i, j] != 255)
-                        {
-                            sw.Write(data_copy[i, j]);
-                            sw.Write(",");
-                        }
-                    }
-                    sw.WriteLine();
-                }
-            }*/
+            _currentBitmap.UnlockBits(bitmapData);
 
-            return StartBitmap;
-
+            return _currentBitmap;
         }
 
         /// <summary>
@@ -214,7 +296,7 @@ namespace SignaliEdge
                         data[2] = gray;
                         //data is a pointer to the first byte of the 3-byte color data    
                     }
-                    
+
                 }
             }
 
@@ -226,29 +308,30 @@ namespace SignaliEdge
         /// Returns the normalized version of original bitmap
         /// </summary>
         /// <returns>Matrix of doubles between 0s and 1s</returns>
-        public unsafe double[,] GetNormalizedMatrix(int startY)
+        public unsafe double[,] GetNormalizedMatrix()
         {
-            if (_originalBitmap == null) return null;
+            if (_currentBitmap == null) return null;
 
-            BitmapData bData = _originalBitmap.LockBits(new Rectangle(0, startY, _originalBitmap.Width, MyGlobals.g_const_height_img), ImageLockMode.ReadWrite, _originalBitmap.PixelFormat);
+            BitmapData bData = _currentBitmap.LockBits(new Rectangle(0, 0, _currentBitmap.Width, _currentBitmap.Height), ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
             bitsPerPixel = GetBitsPerPixel(bData.PixelFormat);
             byte* scan0 = (byte*)bData.Scan0.ToPointer();
 
-            var normalizedMatrix = new double[_originalBitmap.Width, MyGlobals.g_const_height_img];
+            Console.WriteLine(_originalBitmap.Width + " " + _currentBitmap.Height);
+            Console.WriteLine(data_copy);
+            var normalizedMatrix = new double[_currentBitmap.Width, _originalBitmap.Height];
 
             byte* data;
             for (int i = 0; i < bData.Height; ++i)
             {
                 for (int j = 0; j < bData.Width; ++j)
                 {
-                    data = scan0 + i * bData.Stride + j * bitsPerPixel / 8;
-
-                    normalizedMatrix[j, i] = data[0] / 255d;
+                    data = scan0 + i * bData.Stride + j * bitsPerPixel / 8; // * bitsPerPixel / 8
+                    normalizedMatrix[j, i] = (data[0] / 255d);
                     //data is a pointer to the first byte of the 3-byte color data
                 }
             }
 
-            _originalBitmap.UnlockBits(bData);
+            _currentBitmap.UnlockBits(bData);
 
             return normalizedMatrix;
         }
@@ -259,7 +342,7 @@ namespace SignaliEdge
         /// Passed matrix consists only of 0s and 1s.
         /// </summary>
         /// <param name="norm">Matrix with values between 0 and 1</param>
-        public unsafe void DenormalizeCurrent(double[,] norm, List<Point> dataCoordinates, int startY)
+        public unsafe void DenormalizeCurrent(double[,] norm, List<Point> dataCoordinates)
         {
             List<Point> style_dataCoordinates = new List<Point>();
 
@@ -267,13 +350,13 @@ namespace SignaliEdge
             int n = norm.GetLength(0);
             int m = norm.GetLength(1);
 
-            if (m != MyGlobals.g_const_height_img || n != _currentBitmap.Width)
+            if (m != _currentBitmap.Height || n != _currentBitmap.Width)
             {
                 throw new Exception("Sizes don't match.");
             }
 
 
-            BitmapData bData = _currentBitmap.LockBits(new Rectangle(0, startY, _currentBitmap.Width, MyGlobals.g_const_height_img), ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
+            BitmapData bData = _currentBitmap.LockBits(new Rectangle(0, 0, _currentBitmap.Width, _currentBitmap.Height), ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
             bitsPerPixel = GetBitsPerPixel(bData.PixelFormat);
             byte* scan0 = (byte*)bData.Scan0.ToPointer();
 
@@ -304,7 +387,6 @@ namespace SignaliEdge
                 }
             }
 
-            //MyGlobals.g_dataCoordinate_style.Add(startY, style_dataCoordinates);
             _currentBitmap.UnlockBits(bData);
         }
 
@@ -313,20 +395,48 @@ namespace SignaliEdge
         {
             _currentBitmap = null;
             _originalBitmap = null;
-            _startBitmap = null;
             isGrayscale = false;
             bitsPerPixel = 0;
             GC.Collect();
         }
 
     }
+    class ItemReference
+    {
+        public List<string> refs { get; set; }
+        public List<ItemPixel> list { get; set; }
+        public int index { get; set; }
 
-    class CheckData {
-        public int counterPixels {get; set;}
-
-        public CheckData(int counterPixels)
+        public ItemReference(List<string> refs, List<ItemPixel> list, int index)
         {
-            this.counterPixels = counterPixels;
+            this.refs = refs;
+            this.list = list;
+            this.index = index;
+        }
+    }
+
+
+    struct ItemPixel
+    {
+        //public Point position { get; set; }
+        //public bool visited { get; set; }
+        public int index { get; set; }
+        public byte color { get; set; }
+        public List<ItemPixel> children { get; set; }
+        public int index_reference { get; set; }
+        public List<string> specialChildren { get; set; }
+        public string id { get; set; }
+
+        public ItemPixel(string id, byte color, List<ItemPixel> children, int index, int index_reference, List<string> specialChildren)
+        {
+            //this.position = position;
+            this.id = id;
+            this.color = color;
+            this.children = children;
+            //this.visited = visited;
+            this.specialChildren = specialChildren;
+            this.index = index;
+            this.index_reference = index_reference;
         }
     }
 }

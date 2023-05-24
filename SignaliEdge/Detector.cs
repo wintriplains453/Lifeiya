@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Collections;
 
 namespace SignaliEdge
 {
@@ -17,47 +18,47 @@ namespace SignaliEdge
         public Detector() { }
 
         public HashSet<Point> currentListEnd = new HashSet<Point>();
-        private HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
-        private List<Point> _coordinatesVectors = new List<Point>();
-        private byte directionContours = 0;
-        private Point currentData;
-        private Point start_checkPointItems;
-        private Point start_checkPoint;
-        private bool is_Close_Search = false;
+        internal HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
+        internal List<Point> _coordinatesVectors = new List<Point>();
+        internal byte directionContours = 0;
+        internal Point currentData;
+        internal Point start_checkPointItems;
+        internal Point start_checkPoint;
+        internal bool is_Close_Search = false;
 
-        private byte signX = 1;
-        private byte signY = 0;
-        private bool is_signX = true;
-        private bool is_signY = false;
+        internal byte signX = 1;
+        internal byte signY = 0;
+        internal bool is_signX = true;
+        internal bool is_signY = false;
 
-        private bool _maxPrecision;
-        private bool _is_checkAfterAbyss = false;
+        internal bool _maxPrecision;
+        internal bool _is_checkAfterAbyss = false;
         public bool MaxPrecision { get; set; }
 
         //Словарь незамкнутых линий
-        private Dictionary<int, List<Point>> _incompleteLines = new Dictionary<int, List<Point>>();
-        private int _count_incompleteLines = 0;
+        public Dictionary<int, List<Point>> incompleteLines = new Dictionary<int, List<Point>>();
+        internal int _count_incompleteLines = 0;
 
         //Временный список
-        private HashSet<Point> currentListLive = new HashSet<Point>();
-        private List<Point> currentListDeath = new List<Point>();
+        internal HashSet<Point> currentListLive = new HashSet<Point>();
+        internal List<Point> currentListDeath = new List<Point>();
 
         public Dictionary<int, DataPoints> currentListDictionary = new Dictionary<int, DataPoints>();
         private int DictionaryCounter = 0;
 
         //UpperTreshold = ut, LowerTreshold = lt
-        private double ut = 0.002;
-        private double lt = 0.001;
+        internal double ut = 0.002;
+        internal double lt = 0.001;
         public double LowerTreshold { get; set; }
         public double UpperTreshold { get; set; }
 
-        private double[,] xIzvod;
-        private double[,] yIzvod;
-        private double[,] magnitudaGradijenta;
-        private double[,] smerGradijenta;
-        private double[,] xMatrica = { { 1, 0, -1 }, { 2, 0, -2 }, { 1, 0, -1 } };
-        private double[,] yMatrica = { { -1, -2, -1 }, { 0, 0, 0 }, { 1, 2, 1 } };
-        private double[,] gaussMatrica = {
+        internal double[,] xIzvod;
+        internal double[,] yIzvod;
+        internal double[,] magnitudaGradijenta;
+        internal double[,] smerGradijenta;
+        internal double[,] xMatrica = { { 1, 0, -1 }, { 2, 0, -2 }, { 1, 0, -1 } };
+        internal double[,] yMatrica = { { -1, -2, -1 }, { 0, 0, 0 }, { 1, 2, 1 } };
+        internal double[,] gaussMatrica = {
                                             {0.0121, 0.0261, 0.0337, 0.0261, 0.0121},
                                             {0.0261, 0.0561, 0.0724, 0.0561, 0.0261},
                                             {0.0337, 0.0724, 0.0935, 0.0724, 0.0337},
@@ -65,7 +66,7 @@ namespace SignaliEdge
                                             {0.0121, 0.0261, 0.0337, 0.0261, 0.0121}
                                         };
 
-        private double[,] konvolucija(double[,] slikaUlaz, double[,] kernel, int poluprecnik)
+        internal double[,] konvolucija(double[,] slikaUlaz, double[,] kernel, int poluprecnik)
         {
             if (slikaUlaz == null) return null;
 
@@ -412,8 +413,8 @@ namespace SignaliEdge
                     }
                     if (currentListDeath.Count > MyGlobals.g_length_Line_Rectangle / 2 && !is_have_dictionary)
                     {
-                        //Прямые линии
-                        _incompleteLines.Add(_count_incompleteLines, new List<Point>(currentListDeath));
+                        //Линии
+                        incompleteLines.Add(_count_incompleteLines, new List<Point>(currentListDeath));
                         _count_incompleteLines++;
 
                     }
@@ -684,67 +685,24 @@ namespace SignaliEdge
             is_Close_Search = true;
         }
 
-        internal void FilterIncompleteLines(Dictionary<int, ValuesDictionary> BlocksDictionary)//__________________________________переделать строку /*&^*/ отдельно для X и Y
-        {
-            if (_incompleteLines.Count == 0)
-                return;
-
-            HashSet<(int, int)> CheckingIncompleteLines = new HashSet<(int, int)>();
-
-            foreach (var item in BlocksDictionary.ToArray())
-            {
-                for (int j = 0; j < _incompleteLines.Count; j++)
-                {
-                    var largest__coordinate = _incompleteLines[j].GroupBy(x => x.Y).Select(x => new { key = x.Key, value = x.Where(xv => xv.Y == x.Key).Count() }).OrderByDescending(x => x.value).First();
-                    if (!CheckingIncompleteLines.Contains((largest__coordinate.key, largest__coordinate.value)))
-                    {
-            /*&^*/      if (item.Value.PointsArea[0] <= _incompleteLines[j][0].X && item.Value.PointsArea[2] >= _incompleteLines[j].Last().X && (item.Value.PointsArea[2] - item.Value.PointsArea[0]) - MyGlobals.g_length_Lines < _incompleteLines[j].Count)//проверка входит ли блок j в блок i по ширине
-                        {
-                            if (item.Value.PointsArea[1] <= _incompleteLines[j][0].Y && item.Value.PointsArea[5] >= _incompleteLines[j].Last().Y)//проверка входит ли блок j в блок i по высоте
-                            {
-                                Console.WriteLine(largest__coordinate.value + " = value" + " _incompleteLines/2 = " + (_incompleteLines[j].Count - 10) + " key = " + largest__coordinate.key);
-                                //Если найденное наибольшее число прямой встречается больше чем половина прямой, то выполнять условие
-                                if (largest__coordinate.value > _incompleteLines[j].Count - 10)
-                                {
-                                    //дели по Y
-                                    //BlocksDictionary.Remove(item.Key);
-                                    if(largest__coordinate.key < item.Value.height/2)
-                                    {
-                                        BlocksDictionaryAdding(largest__coordinate.key, item, false, BlocksDictionary);
-                                        CheckingIncompleteLines.Add((largest__coordinate.key, largest__coordinate.value));
-                                    } else
-                                    {
-                                        BlocksDictionaryAdding(largest__coordinate.key, item, true, BlocksDictionary);
-                                        CheckingIncompleteLines.Add((largest__coordinate.key, largest__coordinate.value));
-                                    }
-                                } else
-                                {
-                                    //дели по X
-                                }
-                            }
-                        }
-                    }
-
-                }
-            }
-        }
+        
 
         internal void BlocksDictionaryAdding(int largest__oordinate, KeyValuePair<int, ValuesDictionary> item, bool is_more, Dictionary<int, ValuesDictionary> BlocksDictionary)
         {
-            int heightY = is_more ? item.Value.PointsArea[1] - largest__oordinate: largest__oordinate - item.Value.PointsArea[1];
+            int heightY = is_more ? item.Value.PointsArea[0].Y - largest__oordinate: largest__oordinate - item.Value.PointsArea[0].Y;
 
-            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                item.Value.PointsArea[0], !is_more ? item.Value.PointsArea[1] : largest__oordinate,
-                item.Value.PointsArea[2], !is_more ? item.Value.PointsArea[3] : largest__oordinate,
-                item.Value.PointsArea[4], is_more ? item.Value.PointsArea[5] : largest__oordinate,
-                item.Value.PointsArea[6], is_more ? item.Value.PointsArea[7] : largest__oordinate,
+            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                new Point(item.Value.PointsArea[0].X, !is_more ? item.Value.PointsArea[0].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[1].X, !is_more ? item.Value.PointsArea[1].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[2].X, is_more ? item.Value.PointsArea[2].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[3].X, is_more ? item.Value.PointsArea[3].Y : largest__oordinate),
 
             }, MyGlobals.g_counterKey, item.Value.width, heightY, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, item.Value.ParentFirst));
-            MyGlobals.test.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                item.Value.PointsArea[0], !is_more ? item.Value.PointsArea[1] : largest__oordinate,
-                item.Value.PointsArea[2], !is_more ? item.Value.PointsArea[3] : largest__oordinate,
-                item.Value.PointsArea[4], is_more ? item.Value.PointsArea[5] : largest__oordinate,
-                item.Value.PointsArea[6], is_more ? item.Value.PointsArea[7] : largest__oordinate,
+            MyGlobals.test.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                new Point(item.Value.PointsArea[0].X, !is_more ? item.Value.PointsArea[0].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[1].X, !is_more ? item.Value.PointsArea[1].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[2].X, is_more ? item.Value.PointsArea[2].Y : largest__oordinate),
+                new Point(item.Value.PointsArea[3].X, is_more ? item.Value.PointsArea[3].Y : largest__oordinate),
 
             }, MyGlobals.g_counterKey, item.Value.width, heightY, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, item.Value.ParentFirst));
             MyGlobals.g_counterKey++;
@@ -777,4 +735,24 @@ namespace SignaliEdge
         }
     }
 
+    class SemiLines 
+    {
+        internal List<Point> data { get; set; }
+        internal char prevails { get; set; }
+
+        internal SemiLines(List<Point> data, char prevails)
+        {
+            this.data = data;
+            this.prevails = prevails;
+        }
+    }
+
+    class Distance
+    {
+        public int index { get; set; }
+        public double angle { get; set; }
+        //public double distance { get; set; }
+        //public double normalized { get; set; }
+        public Point position { get; set; }
+    }
 }

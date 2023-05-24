@@ -80,7 +80,7 @@ namespace SignaliEdge
         private void DubleRecognize(Image<Bgr, byte> inputImage, ValuesDictionary CurrentItem)
         {
 
-            var ContentArea = new Rectangle() { X = CurrentItem.PointsArea[0], Y = CurrentItem.PointsArea[1], Height = CurrentItem.height + 1, Width = CurrentItem.width + 1 };
+            var ContentArea = new Rectangle() { X = CurrentItem.PointsArea[0].X, Y = CurrentItem.PointsArea[0].Y, Height = CurrentItem.height + 1, Width = CurrentItem.width + 1 };
             using (var ocrInput = new OcrInput())
             {
                 ocrInput.DeNoise();
@@ -92,11 +92,11 @@ namespace SignaliEdge
                     if (!_CheckingID.Contains(MyGlobals.g_counterKey))
                     {
                         _textDictionary.Add(MyGlobals.g_counterKey, new TextDictionary(new List<int>() { item.Location.X, item.Location.Y }, item.Width, item.Height, item.Text));
-                        _BlocksDictionaryCopy.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                            item.Location.X, item.Location.Y,
-                            item.Location.X + item.Width, item.Location.Y,
-                            item.Location.X + item.Width, item.Location.Y + item.Height,
-                            item.Location.X, item.Location.Y + item.Height,
+                        _BlocksDictionaryCopy.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                            new Point(item.Location.X, item.Location.Y),
+                            new Point(item.Location.X + item.Width, item.Location.Y),
+                            new Point(item.Location.X + item.Width, item.Location.Y + item.Height),
+                            new Point(item.Location.X, item.Location.Y + item.Height),
 
                         }, MyGlobals.g_counterKey, item.Width, item.Height, $"<p class=\"Text{MyGlobals.g_counterKey}\">{item.Text}</p>", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, CurrentItem.ID));
                         CurrentItem.FirstChild.Add(MyGlobals.g_counterKey);
@@ -105,11 +105,18 @@ namespace SignaliEdge
                         MyGlobals.g_counterKey++;
                     }
                 }
-                for (int h = CurrentItem.PointsArea[1]; h <= CurrentItem.PointsArea[5]; h++)
+                for (int h = CurrentItem.PointsArea[0].Y; h <= CurrentItem.PointsArea[2].Y; h++)
                 {
-                    for (int w = CurrentItem.PointsArea[0]; w <= CurrentItem.PointsArea[2]; w++)
+                    for (int w = CurrentItem.PointsArea[0].X; w <= CurrentItem.PointsArea[1].X; w++)
                     {
-                        inputImage[h, w] = new Bgr(255, 255, 255);
+                        try
+                        {
+                            inputImage[h, w] = new Bgr(255, 255, 255);
+                        } catch
+                        {
+
+                        }
+                        
                     }
                 }
             }

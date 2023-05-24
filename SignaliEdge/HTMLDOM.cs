@@ -14,7 +14,7 @@ namespace SignaliEdge
         public int LineCounterHTML = 0;
         public void HTMLCompletion(Dictionary<int, ValuesDictionary> BlocksDictionary)
         {
-            BlocksDictionary = BlocksDictionary.OrderBy(i => i.Value.PointsArea[0]).ThenBy(i => i.Value.PointsArea[1]).ToDictionary(i => i.Key, i => i.Value);
+            BlocksDictionary = BlocksDictionary.OrderBy(i => i.Value.PointsArea[0].X).ThenBy(i => i.Value.PointsArea[0].Y).ToDictionary(i => i.Key, i => i.Value);
             foreach (var i in BlocksDictionary)
             {
                 //Console.WriteLine("contours = " + i.Value.PointsArea[0] + " " + i.Value.PointsArea[1] + " height = " + i.Value.height + " width = " + i.Value.width);
@@ -22,9 +22,9 @@ namespace SignaliEdge
                 {
                     if (i.Value.ID != j.Value.ID)
                     {
-                        if (i.Value.PointsArea[0] <= j.Value.PointsArea[0] && i.Value.PointsArea[2] >= j.Value.PointsArea[2])//проверка входит ли блок j в блок i по ширине
+                        if (i.Value.PointsArea[0].X <= j.Value.PointsArea[0].X && i.Value.PointsArea[1].X >= j.Value.PointsArea[1].X)//проверка входит ли блок j в блок i по ширине
                         {
-                            if (i.Value.PointsArea[1] <= j.Value.PointsArea[1] && i.Value.PointsArea[5] >= j.Value.PointsArea[5])//проверка входит ли блок j в блок i по высоте
+                            if (i.Value.PointsArea[0].Y <= j.Value.PointsArea[0].Y && i.Value.PointsArea[2].Y >= j.Value.PointsArea[2].Y)//проверка входит ли блок j в блок i по высоте
                             {
                                 j.Value.ParentFirst = i.Key;
                             }
@@ -38,9 +38,9 @@ namespace SignaliEdge
                 CurrentmaxWidth.Clear();
                 foreach (var j in BlocksDictionary)
                 {
-                    if (i.Value.PointsArea[0] < j.Value.PointsArea[0] && i.Value.PointsArea[2] > j.Value.PointsArea[2])//проверка входит ли блок j в блок i по ширине
+                    if (i.Value.PointsArea[0].X < j.Value.PointsArea[0].X && i.Value.PointsArea[1].X > j.Value.PointsArea[1].X)//проверка входит ли блок j в блок i по ширине
                     {
-                        if (i.Value.PointsArea[1] < j.Value.PointsArea[1] && i.Value.PointsArea[5] > j.Value.PointsArea[5])//проверка входит ли блок j в блок i по высоте
+                        if (i.Value.PointsArea[0].Y < j.Value.PointsArea[0].Y && i.Value.PointsArea[2].Y > j.Value.PointsArea[2].Y)//проверка входит ли блок j в блок i по высоте
                         {
                             i.Value.Children.Add(j.Value.ID, new Blocks("", j.Value.width, j.Value.height, i.Key, false));
                             if (i.Key == j.Value.ParentFirst)

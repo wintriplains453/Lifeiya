@@ -122,6 +122,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="GlobalMethods.cs" />
     <Compile Include="HTMLDOM.cs" />
     <Compile Include="ImageComparison.cs" />
     <Compile Include="ImageHandler.cs" />

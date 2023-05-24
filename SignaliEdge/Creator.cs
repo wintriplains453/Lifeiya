@@ -13,17 +13,31 @@ namespace SignaliEdge
 {
     class Creator
     {
-        private int centerPointX = 0;
-        private int centerPointY = 0;
+        internal int centerPointX = 0;
+        internal int centerPointY = 0;
 
-        private double[] values = new double[1024];
-        private int? ParentFirst = 0;
+        internal Point _sideLeftStart;
+        internal Point _sideLeftEnd;
 
-        private List<Point> coordinates;
+        internal Point _sideRightStart;
+        internal Point _sideRightEnd;
+
+        internal Point _sideTopStart;
+        internal Point _sideTopEnd;
+
+        internal Point _sideBottomStart;
+        internal Point _sideBottomEnd;
+
+        internal double[] values = new double[1024];
+        internal int? ParentFirst = 0;
+
+        internal List<Point> coordinates;
         Dictionary<int, ValuesDictionary> BlocksDictionary = new Dictionary<int, ValuesDictionary>();
-        private Dictionary<Point, CheckDataGray> _searchColor = new Dictionary<Point, CheckDataGray>();
+        internal Dictionary<Point, CheckDataGray> _searchColor = new Dictionary<Point, CheckDataGray>();
 
-        private List<Distance> distancies = new List<Distance>();
+        internal List<Distance> distancies = new List<Distance>();
+        GlobalMethods globalMethods = new GlobalMethods();
+
 
         public double[] getValues()
         {
@@ -31,7 +45,6 @@ namespace SignaliEdge
         }
 
         //Settings 
-        private int _maxBorderThickness = 10;
 
         public Dictionary<int, ValuesDictionary> FilterDictionary(Dictionary<int, ValuesDictionary> BlocksDictionary, Bitmap inputImage)
         {
@@ -40,19 +53,15 @@ namespace SignaliEdge
             {
                 foreach (var child in BlocksDictionary.ToArray())
                 {
-                    if (parent.Value.width - child.Value.width <= _maxBorderThickness && parent.Value.PointsArea[0] <= child.Value.PointsArea[0] && parent.Value.PointsArea[2] >= child.Value.PointsArea[2] && parent.Key != child.Key)//проверка входит ли блок j в блок i по ширине
+                    if (parent.Value.width - child.Value.width <= MyGlobals.g_boder_length && parent.Value.PointsArea[0].X <= child.Value.PointsArea[0].X && parent.Value.PointsArea[1].X >= child.Value.PointsArea[1].X && parent.Key != child.Key)//проверка входит ли блок j в блок i по ширине
                     {
-                        if (parent.Value.height - child.Value.height <= _maxBorderThickness && parent.Value.PointsArea[1] <= child.Value.PointsArea[1] && parent.Value.PointsArea[5] >= child.Value.PointsArea[5])//проверка входит ли блок j в блок i по высоте
+                        if (parent.Value.height - child.Value.height <= MyGlobals.g_boder_length && parent.Value.PointsArea[0].Y <= child.Value.PointsArea[0].Y && parent.Value.PointsArea[2].Y >= child.Value.PointsArea[3].Y)//проверка входит ли блок j в блок i по высоте
                         {
                             BlocksDictionary.Remove(parent.Value.ID);
-                            child.Value.PointsArea[0] -= 2;
-                            child.Value.PointsArea[1] -= 2;
-                            child.Value.PointsArea[2] += 2;
-                            child.Value.PointsArea[3] -= 2;
-                            child.Value.PointsArea[4] += 2;
-                            child.Value.PointsArea[5] += 2;
-                            child.Value.PointsArea[6] -= 2;
-                            child.Value.PointsArea[7] += 2;
+                            child.Value.PointsArea[0] = new Point(child.Value.PointsArea[0].X - 2, child.Value.PointsArea[0].Y - 2);
+                            child.Value.PointsArea[1] = new Point(child.Value.PointsArea[1].X + 2, child.Value.PointsArea[1].Y - 2);
+                            child.Value.PointsArea[2] = new Point(child.Value.PointsArea[2].X + 2, child.Value.PointsArea[2].Y + 2);
+                            child.Value.PointsArea[3] = new Point(child.Value.PointsArea[3].X - 2, child.Value.PointsArea[3].Y + 2);
 
                             break;
                         }
@@ -72,6 +81,10 @@ namespace SignaliEdge
             {
                 Corners corners = new Corners();
                 coordinates = new List<Point>();
+                _sideLeftStart = new Point(MyGlobals.g_inputImage.Width, MyGlobals.g_inputImage.Width);
+                _sideTopStart = new Point(MyGlobals.g_inputImage.Height, MyGlobals.g_inputImage.Height);
+                _sideRightStart = new Point();
+                _sideBottomStart = new Point();
 
                 for (int i = 0; i < PointMasses[itemMesses].data.Count; i++)
                 {
@@ -112,15 +125,14 @@ namespace SignaliEdge
                 {
                     Console.WriteLine("X = " + PointMasses[0].data[i].X + " Y = " + PointMasses[0].data[i].Y + " ____ " + " X = " + ordered[i].X + " Y = " + ordered[i].Y); 
                 }*/
+
                 int x0, y0, x1, y1;
                 int factorLine = 0;
-                int counttest = 0;
 
                 HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
                 List<Point> _ListdataCoordinates = new List<Point>();
-                for (int i = 0; i < PointMasses[itemMesses].data.Count; i++)
+                for (int i = 0; i < PointMasses[itemMesses].data.Count - 1; i++)
                 {
-                    counttest++;
                     if (!_HashdataCoordinates.Contains(PointMasses[itemMesses].data[i]))
                     {
                         _ListdataCoordinates.Clear();
@@ -130,12 +142,12 @@ namespace SignaliEdge
                         x0 = PointMasses[itemMesses].data[i].X;
                         y0 = PointMasses[itemMesses].data[i].Y;
 
-                        if (i + 1 == (PointMasses[itemMesses].data.Count)) { break; }
+                        //if (i + 1 == (PointMasses[itemMesses].data.Count)) { break; }
 
                         x1 = PointMasses[itemMesses].data[i+1].X;
                         y1 = PointMasses[itemMesses].data[i+1].Y;
 
-                        for (int j = 0; j < PointMasses[itemMesses].data.Count; j++)
+                        for (int j = 0; j < PointMasses[itemMesses].data.Count - 1; j++)
                         {
                             int currentX = PointMasses[itemMesses].data[j].X;
                             int currentY = PointMasses[itemMesses].data[j].Y;
@@ -143,42 +155,73 @@ namespace SignaliEdge
                             if (((x1 - x0) * (currentY - y0) - (y1 - y0) * (currentX - x0)) == 0)
                             {
                                 factorLine++;
+
                                 _ListdataCoordinates.Add(PointMasses[itemMesses].data[j]);
+                                _HashdataCoordinates.Add(PointMasses[itemMesses].data[j]);
                             }
                         }
 
+                        //ВАРИАНТ С ДИАГОНАЛЯМИ НЕ ПОДХОДЯЩИЙ!!!!!!!!!!!!
                         if (factorLine > 50)
                         {
-                            coordinates.Add(new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y));
-                            coordinates.Add(new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y));
-
-                            //Console.WriteLine("Первая точка = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
-                            for(int j = 0; j < _ListdataCoordinates.Count; j++)
+                            //Console.WriteLine(_ListdataCoordinates[0]);
+                            if(_ListdataCoordinates[0].Y == _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y)
                             {
-                                _HashdataCoordinates.Add(_ListdataCoordinates[j]);
+                                if (_ListdataCoordinates[0].Y < centerPointY)
+                                {
+                                    if(_ListdataCoordinates[0].Y < _sideTopStart.Y)
+                                    {
+                                        //Console.WriteLine("Первая точка top = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                                        _sideTopStart = new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y);
+                                        _sideTopEnd = new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y);
+                                    }
+                                   
+                                } else
+                                {
+                                    if (_ListdataCoordinates[0].Y > _sideBottomStart.Y)
+                                    {
+                                        //Console.WriteLine("Первая точка bottom = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                                        _sideBottomStart = new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y);
+                                        _sideBottomEnd = new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y);
+                                    }
+                                }
+                            } else if(_ListdataCoordinates[0].X == _ListdataCoordinates[_ListdataCoordinates.Count - 1].X)
+                            {
+                                if (_ListdataCoordinates[0].X < centerPointX)
+                                {
+                                    if (_ListdataCoordinates[0].X < _sideLeftStart.X)
+                                    {
+                                        //Console.WriteLine("Первая точка left = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                                        _sideLeftStart = new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y);
+                                        _sideLeftEnd = new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y);
+                                    }
+                                }
+                                else
+                                {
+                                    if (_ListdataCoordinates[0].X > _sideRightStart.X)
+                                    {
+                                        //Console.WriteLine("Первая точка right = " + _ListdataCoordinates[0] + " последняя точка = " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                                        _sideRightStart = new Point(_ListdataCoordinates[0].X, _ListdataCoordinates[0].Y);
+                                        _sideRightEnd = new Point(_ListdataCoordinates[_ListdataCoordinates.Count - 1].X, _ListdataCoordinates[_ListdataCoordinates.Count - 1].Y);
+                                    }
+                                }
                             }
                         }
                     }
                 }
+                //corners.coordinates = coordinates;
 
-                corners.coordinates = coordinates;
-
-
-
-
-
-
-                if (corners.coordinates.Count != 8)
+                /*if (corners.coordinates.Count != 8)
                 {
                     Console.WriteLine("BREAK");
                     continue;
-                }
+                }*/
 
 
-                Point dataLineFirst = corners.coordinates[1];
-                Point dataLineSecond = corners.coordinates[7];
-                Point dataLineThird = corners.coordinates[3];
-                Point dataLineFourth = corners.coordinates[5];
+                Point dataLineFirst = _sideTopEnd;
+                Point dataLineSecond = _sideLeftEnd;
+                Point dataLineThird = _sideRightEnd;
+                Point dataLineFourth = _sideBottomEnd;
 
                 int[] dataLineCenter = new int[2] { dataLineFirst.X, dataLineSecond.Y };
                 double d = 0;
@@ -206,23 +249,29 @@ namespace SignaliEdge
                 //Console.WriteLine(d-3);
                 //Console.WriteLine(count);
 
+                //Console.WriteLine("Первая точка = " + _sideTopStart.X + " " + _sideTopStart.Y + " последняя точка = " + _sideTopEnd.X + " " + _sideTopEnd.Y);
                 // BlocksDictionary - все блоки найденые системой
-                BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                    dataLineSecond.X, dataLineFirst.Y,
+                BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                    new Point(dataLineSecond.X, dataLineFirst.Y),
+                    new Point(dataLineThird.X, dataLineFirst.Y),
+                    new Point(dataLineThird.X,  dataLineFourth.Y),
+                    new Point(dataLineSecond.X, dataLineFourth.Y),
+
+                    /*dataLineSecond.X, dataLineFirst.Y,
                     dataLineThird.X, dataLineFirst.Y,
                     dataLineThird.X,  dataLineFourth.Y,
-                    dataLineSecond.X, dataLineFourth.Y,
-                    
+                    dataLineSecond.X, dataLineFourth.Y,*/
+
                 }, MyGlobals.g_counterKey, width, height, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, ParentFirst));
                 MyGlobals.g_counterKey++;
             }
 
             //Создание первого элемента body
-            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<int>() {
-                0, 0,
-                MyGlobals.g_inputImage.Width - 1, 0,
-                MyGlobals.g_inputImage.Width - 1,  MyGlobals.g_inputImage.Height - 1,
-                0, MyGlobals.g_inputImage.Height - 1,
+            BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                new Point(0, 0),
+                new Point(MyGlobals.g_inputImage.Width - 1, 0),
+                new Point(MyGlobals.g_inputImage.Width - 1,  MyGlobals.g_inputImage.Height - 1),
+                new Point(0, MyGlobals.g_inputImage.Height - 1),
             }, MyGlobals.g_counterKey, MyGlobals.g_inputImage.Width - 1, MyGlobals.g_inputImage.Height - 1, "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, null));
 
             MyGlobals.g_counterKey++;
@@ -230,49 +279,245 @@ namespace SignaliEdge
 
         }
 
-
-
-
-        private void SearchCorners(int x, int y, List<Point> PointMasses, char depend, Corners corners)
+        internal void FilterIncompleteLines(Dictionary<int, ValuesDictionary> BlocksDictionary, Dictionary<int, List<Point>> _incompleteLines)//__________________________________переделать строку /*&^*/ отдельно для X и Y
         {
-            bool is_while = true;
-            int copy = depend == 'x' ? x : y;
+            if (_incompleteLines.Count == 0)
+                return;
 
-            while (is_while)
+            int x0, y0, x1, y1;
+
+            HashSet<Point> _HashdataCoordinates = new HashSet<Point>();
+            List<Point> _ListdataCoordinates = new List<Point>();
+
+            int factorLine = 0;
+            int semiFigureCount = 0;
+
+            foreach (var item in _incompleteLines.Values)
             {
-                copy += 1;
-                if(!PointMasses.Contains(depend == 'x' ? new Point(copy , y) : new Point(x , copy)))
+                //try
+                //{
+                int countLines = 0;
+                List<OpenLines> endAngles = new List<OpenLines>();
+                Dictionary<int, SemiLines> _ListdataCoordinatesTriple = new Dictionary<int, SemiLines>();
+                Console.WriteLine("_");
+
+                for (int i = 0; i < item.Count - 1; i++)
                 {
-                    copy -= 1;
-                    if (PointMasses.IndexOf(depend == 'x' ? new Point(copy , y) : new Point(x , copy)) != -1)
+                    if (!_HashdataCoordinates.Contains(item[i]))
                     {
-                        coordinates.Add(depend == 'x' ? new Point(copy , y) : new Point(x , copy));
-                    }
-                    
-                    corners.coordinates = coordinates;
-                    copy = depend == 'x' ? x : y;
-                    while (is_while)
-                    {
-                        copy -= 1;
-                        if(!PointMasses.Contains(depend == 'x' ? new Point(copy , y) : new Point(x , copy)))
+                        _HashdataCoordinates.Add(item[i]);
+                        _ListdataCoordinates.Clear();
+                        factorLine = 0;
+
+                        x0 = item[i].X;
+                        y0 = item[i].Y;
+
+                        x1 = item[i + 1].X;
+                        y1 = item[i + 1].Y;
+
+                        for (int j = 0; j < item.Count - 1; j++)
                         {
-                            is_while = false;
-                            copy += 1;
-                            if (PointMasses.IndexOf(depend == 'x' ? new Point(copy , y) : new Point(x , copy)) != -1)
+                            int currentX = item[j].X;
+                            int currentY = item[j].Y;
+
+                            if (((x1 - x0) * (currentY - y0) - (y1 - y0) * (currentX - x0)) == 0)
                             {
-                                coordinates.Add(depend == 'x' ? new Point(copy , y) : new Point(x , copy));
+                                factorLine++;
+                                _ListdataCoordinates.Add(item[j]);
+                                _HashdataCoordinates.Add(item[j]);
+                            }
+                        }
+
+                        if (factorLine > MyGlobals.g_length_Line_Rectangle * 2)
+                        {
+                            countLines++;
+                            var largest__coordinate = _ListdataCoordinates.GroupBy(x => x.Y).Select(x => new { key = x.Key, value = x.Where(xv => xv.Y == x.Key).Count() }).OrderByDescending(x => x.value).First();
+                            char plain = largest__coordinate.value > 1 ? 'Y' : 'X';//! опасное место, возможна путаница между X и Y 
+
+                            semiFigureCount++;
+                            Console.WriteLine("! " + factorLine + " start " + _ListdataCoordinates[0] + " end " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+
+                            if(endAngles.Count == 0)
+                            {
+                                endAngles.Add(new OpenLines(_ListdataCoordinates[0], _ListdataCoordinates[_ListdataCoordinates.Count - 1], plain));
+                            }
+                            else
+                            {
+                                Point newPoint = new Point();
+                                if (endAngles[endAngles.Count - 1].plain == 'Y')
+                                {
+                                    newPoint.Y = endAngles[endAngles.Count - 1].endPoint.Y;
+                                }
+                                else
+                                {
+                                    newPoint.X = endAngles[endAngles.Count - 1].endPoint.X;
+                                }
+                                if (plain == 'Y') {
+                                    newPoint.Y = _ListdataCoordinates[0].Y;
+                                } else
+                                {
+                                    newPoint.X = _ListdataCoordinates[0].X;
+                                }
+
+                                endAngles[endAngles.Count - 1].endPoint = newPoint;
+                                endAngles.Add(new OpenLines(newPoint, _ListdataCoordinates[_ListdataCoordinates.Count - 1], plain));
                             }
                         }
                     }
                 }
+                if (countLines > 3)
+                {
+                    countLines = 0;
+                    Point centerPoints = globalMethods.SearchCenter(item);
+
+                    double distance = 0;
+                    double minimalDistance = MyGlobals.g_inputImage.Width + MyGlobals.g_inputImage.Height;
+                    Point startResult = new Point();
+                    Point endResult = new Point();
+
+                    Point BlockItemCheck = new Point();
+
+                    /*for(int i = 1; i < endAngles.Count - 1; i++)
+                    {
+                        endAngles.Insert(i,
+                            new Point(
+                                (endAngles[i].X + endAngles[i + 1].X) / 2,
+                                (endAngles[i].Y + endAngles[i + 1].Y) / 2
+                            )
+                        );
+                        endAngles.Remove(endAngles[i]);
+                        endAngles.Remove(endAngles[i+1]);
+                    }*/
+
+                    //Перемещение всех точек класса OpenLines в список типа Point
+                    List<Point> resultingAngles = new List<Point>();
+                    foreach (var elem in endAngles)
+                    {
+                        if (!resultingAngles.Contains(elem.startPoint))
+                        {
+                            resultingAngles.Add(elem.startPoint);
+
+                        }
+                        if (!resultingAngles.Contains(elem.endPoint))
+                        {
+                            resultingAngles.Add(elem.endPoint);
+                        }
+                    }
+
+                    //Сортировка точек по часовой стрелке
+                    List<Distance> endAnglesSort = new List<Distance>();
+
+                    for (int i = 0; i < resultingAngles.Count; i++)
+                    {
+                        Distance distanceClass = new Distance();
+
+                        distanceClass.position = resultingAngles[i];
+                        distanceClass.angle = Math.Atan2(resultingAngles[i].Y - centerPoints.Y, resultingAngles[i].X - centerPoints.X) * 180 / Math.PI;
+
+                        endAnglesSort.Add(distanceClass);
+                    }
+
+                    endAnglesSort.Sort((a, b) => (int)a.angle - (int)b.angle);
+
+                    foreach (var itemBlock in BlocksDictionary.Values)
+                    {
+                        for (int elem = 0; elem < itemBlock.PointsArea.Count; elem++)
+                        {
+                            BlockItemCheck = itemBlock.PointsArea[elem];
+                            distance = Math.Pow(item[0].X - BlockItemCheck.X, 2) + Math.Pow(item[0].Y - BlockItemCheck.Y, 2);
+                            if (minimalDistance > distance)
+                            {
+                                minimalDistance = distance;
+                                startResult = new Point(BlockItemCheck.X, BlockItemCheck.Y);
+                                //поиск точек по соседям
+
+                                //ВЕСЬ КОД ЭТОГО МЕТОДА СТОИТ ПЕРЕДЕЛАТЬ!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                switch (elem)
+                                {
+                                    case 0:
+                                        ChooseResult(itemBlock.PointsArea[0], itemBlock.PointsArea[1], itemBlock.PointsArea[3]);
+                                        break;
+                                    case 1:
+                                        ChooseResult(itemBlock.PointsArea[1], itemBlock.PointsArea[0], itemBlock.PointsArea[2]);
+                                        break;
+                                    case 2:
+                                        ChooseResult(itemBlock.PointsArea[2], itemBlock.PointsArea[3], itemBlock.PointsArea[1]);
+                                        break;
+                                    case 3:
+                                        ChooseResult(itemBlock.PointsArea[3], itemBlock.PointsArea[2], itemBlock.PointsArea[0]);
+                                        break;
+                                }
+                                //resultingAngles[0] = endResult;
+                                //resultingAngles[resultingAngles.Count - 1] = startResult;
+                            }
+                        }
+                    }
+                    /*List<Point> checkingRepete = new List<Point>();
+                    foreach(var parentElem in endAngles.ToArray())
+                    {
+                        if (!checkingRepete.Contains(parentElem))
+                        {
+                            checkingRepete.Add(parentElem);
+                            foreach (var childElem in endAngles.ToArray())
+                            {
+                                if(!checkingRepete.Contains(childElem))
+                                {
+                                    if (parentElem.X - childElem.X < 10 && parentElem.Y - childElem.Y < 10)
+                                    {
+                                        endAngles.Add(new Point((parentElem.X + childElem.X) / 2, (parentElem.Y + childElem.Y) / 2));
+
+                                        endAngles.Remove(parentElem);
+                                        endAngles.Remove(childElem);
+
+                                        checkingRepete.Add(childElem);
+                                    }
+                                }
+                            }
+                        }
+                    }*/
+
+                    endAngles.Clear();
+                    foreach (var elem in endAnglesSort)
+                    {
+                        Console.WriteLine(elem.position);
+                        resultingAngles.Add(elem.position);
+                    }
+
+                    BlocksDictionary.Add(MyGlobals.g_counterKey, new ValuesDictionary(false, new List<Point>() {
+                            resultingAngles[0],
+                            resultingAngles[1],
+                            resultingAngles[2],
+                            resultingAngles[3],
+                        }, MyGlobals.g_counterKey, (endResult.X - startResult.X), (_ListdataCoordinates[1].Y - endResult.Y), "", new Dictionary<int, Blocks>() { }, new Dictionary<int, BlocksTextP>() { }, null));
+                    MyGlobals.g_counterKey++;
+
+                    void ChooseResult(Point start, Point endX, Point endY)
+                    {
+                        if (start.X < centerPoints.X && centerPoints.X > endX.X)
+                        {
+                            endResult = endX;
+                        }
+                        else if (start.Y < centerPoints.Y && centerPoints.Y > endY.Y)
+                        {
+                            endResult = endY;
+                        }
+                    }
+
+                    //Console.WriteLine(startResult + (" X = " + item[0].X + " Y = " + item[0].Y) + (" X end = " + item[item.Count - 1].X + " Y end = " + item[item.Count - 1].Y));
+                }
+                //} catch
+                //{
+
+                // }
             }
         }
+
         private unsafe void searchBackground(Bitmap GrayImage)
         {
             HashSet<byte> ListColors = new HashSet<byte>();
             foreach (var child in BlocksDictionary.ToArray())
             {
-                BitmapData bitmapData = GrayImage.LockBits(new Rectangle(child.Value.PointsArea[0], child.Value.PointsArea[1], child.Value.PointsArea[2], child.Value.PointsArea[5]), 
+                BitmapData bitmapData = GrayImage.LockBits(new Rectangle(child.Value.PointsArea[0].X, child.Value.PointsArea[0].Y, child.Value.PointsArea[1].X, child.Value.PointsArea[2].Y), 
                     ImageLockMode.ReadWrite, GrayImage.PixelFormat);
 
                 int bytesPerPixel = Bitmap.GetPixelFormatSize(GrayImage.PixelFormat) / 8;//Размер пикселя
@@ -322,18 +567,23 @@ namespace SignaliEdge
         }
 
     }
-    class Distance
-    {
-        public int index { get; set; }
-        public double angle { get; set; }
-        public double distance { get; set; }
-        public double normalized { get; set; }
-        public double position { get; set; }
-    }
 
     class Corners 
     {
         public List<Point> coordinates { get; set; }
+    }
+
+    class OpenLines {
+        public Point startPoint { get; set; }
+        public Point endPoint { get; set; }
+        public char plain { get; set; }
+
+        public OpenLines(Point startPoint, Point endPoint, char plain)
+        {
+            this.startPoint = startPoint;
+            this.endPoint = endPoint;
+            this.plain = plain;
+        }
     }
 
     class CheckDataGray
@@ -347,19 +597,6 @@ namespace SignaliEdge
             this.counterPixels = counterPixels;
             this.color = color;
             this.pointsPixels = pointsPixels;
-        }
-    }
-
-
-    class DistanceeComparer : IComparer<Distance>
-    {
-        public int Compare(Distance x, Distance y)
-        {
-            if (x.position < y.position)
-                return -1;
-            else if (x.position > y.position)
-                return 1;
-            else return 0;
         }
     }
 }
