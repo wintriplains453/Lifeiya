@@ -85,7 +85,7 @@ namespace SignaliEdge
             imageHandler.OriginalBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
             imageHandler.CurrentBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
 
-            imageHandler.SetGrayscale();
+            //imageHandler.SetGrayscale();
             imageHandler.SetNewImage();
 
             inputImage = new Image<Bgr, byte>(fdIzborSlike.FileName);
@@ -209,8 +209,9 @@ namespace SignaliEdge
                 n = null;
                 slika = null;
                 //Y ___ X
-                //inputImage[102, 6] = new Bgr(0, 0, 255);
-                //inputImage[102, 509] = new Bgr(0, 0, 255);
+                //inputImage[19, 20] = new Bgr(0, 0, 255);
+                //inputImage[9, 111] = new Bgr(0, 0, 255);
+                //inputImage[8, 0] = new Bgr(0, 0, 255);
 
 
 
