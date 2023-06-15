@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Diagnostics;
 
 namespace SignaliEdge
 {
@@ -72,12 +73,12 @@ namespace SignaliEdge
             }
             return BitsPerPixel;
         }
+
         public unsafe Bitmap SetNewImage()
         {
             BitmapData bitmapData = _currentBitmap.LockBits(new Rectangle(0, 0, _currentBitmap.Width, _currentBitmap.Height),
                 ImageLockMode.ReadWrite, _currentBitmap.PixelFormat);
-
-            data_copy = new double[bitmapData.Height, bitmapData.Width];
+            data_copy = new double[bitmapData.Width, bitmapData.Height];
 
             bitsPerPixel = GetBitsPerPixel(bitmapData.PixelFormat);
             byte* scanZero = (byte*)bitmapData.Scan0.ToPointer();
@@ -86,313 +87,389 @@ namespace SignaliEdge
             int currentElemY = 0;
             int currentElemX = 0;
 
-            List<ItemPixel> abs;
-            List<ItemReference> temporaryResult;
+            List<ItemPixel> abs = new List<ItemPixel>();
+            List<ItemReference> temporaryResult = new List<ItemReference>();
             List<List<ItemReference>> temporaryResultEnd = new List<List<ItemReference>>();
-            List<string> arrayVisit = new List<string>();
+            HashSet<string> arrayVisit = new HashSet<string>();
             HashSet<string> checkingVisited = new HashSet<string>();
+            Dictionary<byte, int> colorsLayout = new Dictionary<byte, int>();
+
 
             byte counter = 0;
 
             //Цикл поиска
-            int stepConvolutionWidth = bitmapData.Width % 6 != 0 ? bitmapData.Width - bitmapData.Width % 6 : 6;
-            int stepConvolutionHeight = bitmapData.Height % 6 != 0 ? bitmapData.Height - bitmapData.Height % 6 : 6;
+            int stepConvolutionWidth = 6;
+            int stepConvolutionHeight = 6;
 
             int mainHeight = bitmapData.Height;
-            int mainWidth = bitmapData.Width - 3;
+            int mainWidth = bitmapData.Width;
 
-            
+            int colorCounter = 0;
 
-
-            for (int i = 0; i < mainHeight; i += 6)
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            for (int i = 0; i < mainHeight; i++)
             {
-                for (int j = 0; j < mainWidth - 3; j += 6)
+                for (int j = 0; j < mainWidth; j++)
                 {
-                    //arrayVisit.Clear();
+                    pixel = scanZero + i * bitmapData.Stride + j * bitsPerPixel / 8;
+                    var gray = (byte)(.299 * pixel[2] + .587 * pixel[1] + .114 * pixel[0]);
+
+                    if (!colorsLayout.ContainsKey(gray)) {
+                        colorsLayout.Add(gray, 1);
+                        colorCounter++;
+                    } else
+                    {
+                        colorsLayout[gray]++;
+                        colorCounter++;
+                    }
+                }
+            }
+
+            foreach(var color in colorsLayout.ToArray())
+            {
+                if((double)color.Value/(double)colorCounter*100d < 5)
+                {
+                    colorsLayout.Remove(color.Key);
+                }
+            }
+
+
+            for (int i = 0; i < mainHeight - 6; i += stepConvolutionHeight)
+            {
+                for (int j = 0; j < mainWidth - 6; j += stepConvolutionWidth)
+                {
+
+                    arrayVisit.Clear();
                     abs = new List<ItemPixel>();
                     temporaryResult = new List<ItemReference>();
                     counter = 0;
 
-                    stepConvolutionWidth = j == bitmapData.Width ? 0 : j % 6 != 0 ? bitmapData.Width - j % 6 : 6;
-                    stepConvolutionHeight = i == bitmapData.Height ? 0 : i % 6 != 0 ? bitmapData.Height - i % 6 : 6;
-                    //stepConvolutionWidth = bitmapData.Width - j < 6 ? (bitmapData.Width-1) - j : 6;
-                    //stepConvolutionHeight = bitmapData.Height - i < 6 ? (bitmapData.Height - 1) - i : 6;
-
-                    //!!!!!!!!!!!!!!!!!!! Цикл скорее всего лишний
-                    for (int y = i - 6; y <= i + 6; y += 6)
+                    /*if((bitmapData.Width - j) < 7)
                     {
-                        for (int x = j - 6; x <= j + 6; x += 6)
-                        {
-                            if (0 <= y && y < mainHeight && 0 <= x && x < mainWidth)
-                            {
-                                //Console.WriteLine("y = " + y + " x = " + x);
-                                if (y == i && x == j)
-                                {
-                                    currentElemY = y;
-                                    currentElemX = x;
-                                }
+                        stepConvolutionWidth = bitmapData.Width % 6 == 0 ? 6 : 6 - (bitmapData.Width % 6);
+                    } if((bitmapData.Height - i) < 7)
+                    {
+                        stepConvolutionHeight = bitmapData.Height % 6 == 0 ? 6 : 6 - (bitmapData.Height % 6);
+                    }*/
 
-                                repeatCircle(y, x);
+                    List<int> checkingColors = new List<int>();
+                    bool is_allowance = true;
+
+                    for (int y = i; y <= i + stepConvolutionHeight; y++)
+                    {
+                        for (int x = j; x <= j + stepConvolutionWidth; x++)
+                        {
+                            pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
+
+                            var gray = (byte)(.299 * pixel[2] + .587 * pixel[1] + .114 * pixel[0]);
+                            //Console.WriteLine(pixel[0] + " i = " + y + " j = " + x);
+                            
+                            if (!checkingColors.Contains(gray))
+                            {
+                                checkingColors.Add(gray);
+                                if(checkingColors.Count > 1)
+                                {
+                                    is_allowance = false;
+                                    break;
+                                }
                             }
+                        }
+                        if(is_allowance == false)
+                        {
+                            break;
                         }
                     }
+                    
 
-                    void repeatCircle(int y, int x)
+                    if (is_allowance == false)
                     {
-                        abs.Clear();
-                        temporaryResult.Clear();
-                        counter = 0;
-
-                        stepConvolutionWidth = x == bitmapData.Width ? 0 : x % 6 < 6 ? bitmapData.Width - x % 6 : 6;
-                        stepConvolutionHeight = y == bitmapData.Height ? 0 : y % 6 < 6 ? bitmapData.Height - y % 6 : 6;
-                        //Проход по циклу с шагом 6 
-                        for (int r = y; r < (y + 6); r++)
+                        //Console.WriteLine("i = " + i + " j = " + j);
+                        for (int y = i - stepConvolutionHeight; y <= i + stepConvolutionHeight; y += stepConvolutionHeight)
                         {
-                            for (int c = x; c < (x + 6); c++)
+                            for (int x = j - stepConvolutionWidth; x <= j + stepConvolutionWidth; x += stepConvolutionWidth)
                             {
-                                pixel = scanZero + r * bitmapData.Stride + c * bitsPerPixel / 8;
-
-                                ItemPixel startPoint = new ItemPixel();
-                                startPoint.id = $"{r}|{c}";
-                                startPoint.color = pixel[0];
-                                startPoint.children = new List<ItemPixel>();
-                                startPoint.specialChildren = new List<string>();
-                                startPoint.index = counter;
-                                startPoint.position = new Point(c, r);
-                                counter++;
-
-
-                                //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
-
-                                //if (pixel[0] != 255 && pixel[1] != 255 && pixel[2] != 255)
-                                //{
-                                //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
-                                //}
-
-
-                                for (int yt = r - 1; yt <= r + 1; yt++)
+                                if (0 <= y && y < mainHeight && 0 <= x && x < mainWidth)
                                 {
-                                    for (int xt = c - 1; xt <= c + 1; xt++)
+                                    //Console.WriteLine("y !!= " + y + " x !!= " + x + " mainHeight = " + mainHeight);
+                                    if (y == i && x == j)
                                     {
-                                        if (0 <= yt && yt < bitmapData.Height && 0 <= xt && xt < bitmapData.Width && (yt != r || xt != c))
-                                        {
-                                            pixel = scanZero + yt * bitmapData.Stride + xt * bitsPerPixel / 8;
+                                        currentElemY = y;
+                                        currentElemX = x;
 
-                                            if (startPoint.color == pixel[0])
-                                            {
-                                                if (yt < y || yt >= (y + MyGlobals.g_list_count_more) || xt < x || xt >= (x + MyGlobals.g_list_count_more))
-                                                {
-                                                    startPoint.specialChildren.Add($"{yt}|{xt}");
-                                                }
-                                                else
-                                                {
-                                                    ItemPixel childremnItem = new ItemPixel();
-                                                    childremnItem.id = $"{yt}|{xt}";
-                                                    childremnItem.specialChildren = new List<string>();
-
-                                                    startPoint.children.Add(childremnItem);
-                                                }
-
-                                            }
-                                        }
                                     }
-                                }
-                                abs.Add(startPoint);
-                                _fullABS.Add(startPoint);
 
+                                    repeatCircle(y, x);
+                                }
                             }
                         }
-                        //BFS
-                        for (int a = 0; a < abs.Count; a++)
+
+                        void repeatCircle(int y, int x)
                         {
-                            if (!arrayVisit.Contains(abs[a].id))
+                            abs.Clear();
+                            temporaryResult = new List<ItemReference>();
+                            counter = 0;
+                            //Проход по циклу с шагом 6 
+                            for (int r = y; r < (y + stepConvolutionHeight); r++)
                             {
-                                arrayVisit.Add(abs[a].id);
-                                List<ItemPixel> resultStride = new List<ItemPixel>();
-                                List<ItemPixel> queue = new List<ItemPixel>();
-
-                                ItemPixel s = abs[a];
-                                queue.Add(s);
-                                resultStride.Add(s);
-                                s.index_reference = _reference_count;
-
-                                for (int spc = 0; spc < s.specialChildren.Count; spc++)
+                                for (int c = x; c < (x + stepConvolutionWidth); c++)
                                 {
-                                    if (!_all_reference_elems.Contains(s.specialChildren[spc]))
+                                    if (0 <= r && r < mainHeight && 0 <= c && c < mainWidth)
                                     {
-                                        _all_reference_elems.Add(s.specialChildren[spc]);
-                                    }
-                                }
+                                        pixel = scanZero + r * bitmapData.Stride + c * bitsPerPixel / 8;
 
-                                checkingVisited.Add(s.id);
-                                while (queue.Count > 0)
-                                {
-                                    int removeIndex = queue[0].index;
-                                    queue.RemoveAt(0);
+                                        ItemPixel startPoint = new ItemPixel();
+                                        startPoint.id = $"{r}|{c}";
+                                        startPoint.color = pixel[0];
+                                        startPoint.children = new List<ItemPixel>();
+                                        startPoint.specialChildren = new List<string>();
+                                        startPoint.index = counter;
+                                        startPoint.position = new Point(c, r);
+                                        counter++;
 
-                                    foreach (var neighbor in abs[removeIndex].children)
-                                    {
-                                        ItemPixel currentPixel = abs.Find(item => item.id == neighbor.id);
-                                        if (currentPixel.specialChildren != null)
+                                        //var gray = (byte)(.299 * pixel[2] + .587 * pixel[1] + .114 * pixel[0]);
+                                        //data_copy[c, r] = gray;
+                                        //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
+
+                                        //if (pixel[0] != 255 && pixel[1] != 255 && pixel[2] != 255)
+                                        //{
+                                        //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
+                                        //}
+
+
+                                        for (int yt = r - 1; yt <= r + 1; yt++)
                                         {
-                                            if (!checkingVisited.Contains(currentPixel.id))
+                                            for (int xt = c - 1; xt <= c + 1; xt++)
                                             {
-                                                for (int spc = 0; spc < currentPixel.specialChildren.Count; spc++)
+                                                if (0 <= yt && yt < bitmapData.Height && 0 <= xt && xt < bitmapData.Width && (yt != r || xt != c))
                                                 {
-                                                    if (!_all_reference_elems.Contains(currentPixel.specialChildren[spc]))
+                                                    pixel = scanZero + yt * bitmapData.Stride + xt * bitsPerPixel / 8;
+
+                                                    if (startPoint.color == pixel[0])
                                                     {
-                                                        _all_reference_elems.Add(currentPixel.specialChildren[spc]);
+                                                        if (yt < y || yt >= (y + MyGlobals.g_list_count_more) || xt < x || xt >= (x + MyGlobals.g_list_count_more))
+                                                        {
+                                                            startPoint.specialChildren.Add($"{yt}|{xt}");
+                                                        }
+                                                        else
+                                                        {
+                                                            ItemPixel childremnItem = new ItemPixel();
+                                                            childremnItem.id = $"{yt}|{xt}";
+                                                            childremnItem.specialChildren = new List<string>();
+
+                                                            startPoint.children.Add(childremnItem);
+                                                        }
+
                                                     }
                                                 }
-                                                //Console.WriteLine(currentPixel.position);
-                                                queue.Add(currentPixel);
-                                                currentPixel.index_reference = _reference_count;
-                                                arrayVisit.Add(neighbor.id);
-                                                checkingVisited.Add(currentPixel.id);
-                                                resultStride.Add(currentPixel);
                                             }
                                         }
-
+                                        abs.Add(startPoint);
+                                        _fullABS.Add(startPoint);
                                     }
                                 }
-                                temporaryResult.Add(new ItemReference(_all_reference_elems, resultStride, _reference_count));
-                                _all_reference_elems.Clear();
-                                _reference_count++;
+                            }
+                            //BFS                            
+                            for (int a = 0; a < abs.Count; a++)//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! если abs 36 то нет нужды в переборе и чистке, можно жлбавить поле к общему списку
+                            {
+                                if (!arrayVisit.Contains(abs[a].id))
+                                {
+                                    arrayVisit.Add(abs[a].id);
+                                    List<ItemPixel> resultStride = new List<ItemPixel>();
+                                    List<ItemPixel> queue = new List<ItemPixel>();
 
-                                queue = null;
-                                resultStride = null;
+                                    ItemPixel s = abs[a];
+                                    queue.Add(s);
+                                    resultStride.Add(s);
+                                    s.index_reference = _reference_count;
+
+                                    for (int spc = 0; spc < s.specialChildren.Count; spc++)
+                                    {
+                                        if (!_all_reference_elems.Contains(s.specialChildren[spc]))
+                                        {
+                                            _all_reference_elems.Add(s.specialChildren[spc]);
+                                        }
+                                    }
+
+                                    checkingVisited.Add(s.id);
+                                    while (queue.Count > 0)
+                                    {
+                                        int removeIndex = queue[0].index;
+                                        queue.RemoveAt(0);
+
+                                        foreach (var neighbor in abs[removeIndex].children)
+                                        {
+                                            ItemPixel currentPixel = abs.Find(item => item.id == neighbor.id);
+                                            if (currentPixel.specialChildren != null)
+                                            {
+                                                if (!checkingVisited.Contains(currentPixel.id))
+                                                {
+                                                    for (int spc = 0; spc < currentPixel.specialChildren.Count; spc++)
+                                                    {
+                                                        if (!_all_reference_elems.Contains(currentPixel.specialChildren[spc]))
+                                                        {
+                                                            _all_reference_elems.Add(currentPixel.specialChildren[spc]);
+                                                        }
+                                                    }
+                                                    //Console.WriteLine(currentPixel.position);
+                                                    queue.Add(currentPixel);
+                                                    currentPixel.index_reference = _reference_count;
+                                                    arrayVisit.Add(neighbor.id);
+                                                    checkingVisited.Add(currentPixel.id);
+                                                    resultStride.Add(currentPixel);
+                                                }
+                                            }
+
+                                        }
+                                    }
+                                    temporaryResult.Add(new ItemReference(_all_reference_elems, resultStride, _reference_count));
+                                    _all_reference_elems.Clear();
+                                    _reference_count++;
+
+                                    //queue = null;
+                                    //resultStride = null;
+                                }
+                            }
+                            if (temporaryResult.Count > 0)
+                            {
+                                temporaryResultEnd.Add(temporaryResult);
                             }
                         }
-                        if(temporaryResult.Count > 0)
-                        {
-                            temporaryResultEnd.Add(temporaryResult);
-                        }
-                    }
 
-                    //CLEAR
-                    bool is_flag = false;
-                    for (int item = 0; item < temporaryResultEnd.Count-2; item++)
-                    {
-                        if ($"{currentElemY}|{currentElemX}" == temporaryResultEnd[item][0].list[0].id)
+                        //CLEAR
+                        //Clear отменится если 36 элементов одинаковые 
+                        bool is_flag = false;
+                        for (int item = 0; item < temporaryResultEnd.Count; item++)//Иногда count 36 
                         {
-                            //Console.WriteLine("current = " + currentElemY + " _ " + currentElemX);
-                            for (int ic = 0; ic < temporaryResultEnd[item].Count; ic++)
+                            if ($"{currentElemY}|{currentElemX}" == temporaryResultEnd[item][0].list[0].id)
                             {
-                                if (temporaryResultEnd[item].Count > 1)
+                                //Console.WriteLine("current = " + currentElemY + " _ " + currentElemX);
+                                for (int ic = 0; ic < temporaryResultEnd[item].Count; ic++)
                                 {
-                                    if (temporaryResultEnd[item][ic].list.Count < MyGlobals.g_list_count_more)
+                                    if (temporaryResultEnd[item].Count > 1)
                                     {
-
-                                        bool is_cleaned = true;
-                                        if (temporaryResultEnd[item][ic].refs.Count > 0)
+                                        Console.WriteLine(temporaryResultEnd);
+                                        if (temporaryResultEnd[item][ic].list.Count < MyGlobals.g_list_count_more)
                                         {
-                                            ItemPixel elemArr = temporaryResultEnd[item][ic].list[0];
 
-                                            int counterLength = temporaryResultEnd[item][ic].list.Count;
-                                            List<int> checkingLength = new List<int>();
-
-
-                                            for (int jc = 0; jc < temporaryResultEnd[item][ic].refs.Count; jc++)
+                                            bool is_cleaned = true;
+                                            if (temporaryResultEnd[item][ic].refs.Count > 0)
                                             {
-                                                // console.log(temporaryResultEnd[item][i].refs[j])
-                                                int finding = _fullABS.Find(elem => elem.id == temporaryResultEnd[item][ic].refs[jc]).index_reference;
-                                                //ПРАВИЛЬНО!
-                                                bool neewerFlag = false;
-                                                // console.log(finding)
-                                                if (!checkingLength.Contains(finding))
+                                                ItemPixel elemArr = temporaryResultEnd[item][ic].list[0];
+
+                                                int counterLength = temporaryResultEnd[item][ic].list.Count;
+                                                List<int> checkingLength = new List<int>();
+
+
+                                                for (int jc = 0; jc < temporaryResultEnd[item][ic].refs.Count; jc++)
                                                 {
-                                                    for (int n = 0; n < temporaryResultEnd.Count; n++)
+                                                    // console.log(temporaryResultEnd[item][i].refs[j])
+                                                    int finding = _fullABS.Find(elem => elem.id == temporaryResultEnd[item][ic].refs[jc]).index_reference;
+                                                   
+                                                    bool neewerFlag = false;
+                                                    if (!checkingLength.Contains(finding))
                                                     {
-                                                        for (int m = 0; m < temporaryResultEnd[n].Count; m++)
+                                                        for (int n = 0; n < temporaryResultEnd.Count; n++)
                                                         {
-                                                            if (temporaryResultEnd[n][m].index == finding)
+                                                            for (int m = 0; m < temporaryResultEnd[n].Count; m++)
                                                             {
-                                                                checkingLength.Add(temporaryResultEnd[n][m].index);
+                                                                if (temporaryResultEnd[n][m].index == finding)
+                                                                {
+                                                                    checkingLength.Add(temporaryResultEnd[n][m].index);
 
-                                                                counterLength += temporaryResultEnd[n][m].list.Count;
-                                                                neewerFlag = true;
+                                                                    counterLength += temporaryResultEnd[n][m].list.Count;
+                                                                    neewerFlag = true;
 
+                                                                    break;
+                                                                }
+                                                            }
+                                                            if (neewerFlag)
+                                                            {
                                                                 break;
                                                             }
                                                         }
-                                                        if (neewerFlag)
-                                                        {
-                                                            break;
-                                                        }
                                                     }
                                                 }
-                                            }
-                                            if (counterLength > 6)
-                                            {
-                                                is_cleaned = false;
-                                                break;
-                                            }
-                                            // console.log(elemArr.id + " " + counterLength)
-                                        }
-
-                                        if (is_cleaned)
-                                        {
-                                            for (int jc = 0; jc < temporaryResultEnd[item][ic].list.Count; jc++)
-                                            {
-                                                ItemPixel elem = temporaryResultEnd[item][ic].list[jc];
-                                                int posY= Convert.ToInt32(elem.id.Split('|')[0]);
-                                                int posX = Convert.ToInt32(elem.id.Split('|')[1]);
-
-                                                data_copy[posY, posX] = 255d;
-                                                List<int> repeatableValueList = new List<int>();
-
-                                                /*for (int y = posY - 1; y <= posY + 1; ++y)//На какой пиксель из 8 соседних заменить текущий
+                                                if (counterLength > 6)
                                                 {
-                                                    for (int x = posX - 1; x <= posX + 1; ++x)
+                                                    is_cleaned = false;
+                                                    break;
+                                                }
+                                                // console.log(elemArr.id + " " + counterLength)
+                                            }
+
+                                            if (is_cleaned)
+                                            {
+                                                for (int jc = 0; jc < temporaryResultEnd[item][ic].list.Count; jc++)
+                                                {
+                                                    ItemPixel elem = temporaryResultEnd[item][ic].list[jc];
+                                                    int posY = Convert.ToInt32(elem.id.Split('|')[0]);
+                                                    int posX = Convert.ToInt32(elem.id.Split('|')[1]);
+                                                    List<byte> repeatableValueList = new List<byte>();
+                                                    //Console.WriteLine(elem.color + " " + elem.id);
+
+                                                    /*for (int y = posY - 1; y <= posY + 1; ++y)//На какой пиксель из 8 соседних заменить текущий
                                                     {
-                                                        pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
-                                                        
-                                                        if (0 <= y && y < bitmapData.Height && 0 <= x && x < bitmapData.Width && (y != posY || x != posX))
+                                                        for (int x = posX - 1; x <= posX + 1; ++x)
                                                         {
-                                                            //8 соседей
-                                                            if (pixel[0] != elem.color)
+                                                            pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
+
+                                                            if (0 <= y && y < bitmapData.Height && 0 <= x && x < bitmapData.Width && (y != posY || x != posX))
                                                             {
-                                                                repeatableValueList.Add(pixel[0]);
+                                                                //8 соседей
+                                                                if (pixel[0] != elem.color)
+                                                                {
+                                                                    if(!repeatableValueList.Contains(pixel[0]))
+                                                                    {
+                                                                        repeatableValueList.Add(pixel[0]);
+                                                                    }
+                                                                }
                                                             }
                                                         }
+                                                    }*/
+                                                    //Console.WriteLine(repeatableValueList.Count);
+                                                    /*if(repeatableValueList.Count > 1)
+                                                    {
+                                                        data_copy[posX, posY] = repeatableValueList.OrderBy(x => Math.Abs(x - data_copy[posX, posY])).First();
+                                                    } 
+                                                    else if(repeatableValueList.Count == 1) 
+                                                    {
+                                                        data_copy[posX, posY] = repeatableValueList[0];
                                                     }
-                                                }*/
-                                                //allMax(repeatableValueList)
-                                                Console.WriteLine(posY + " _ " + posX + "_ " + item);
-                                                Console.WriteLine(temporaryResultEnd[item][ic].list);
+                                                    repeatableValueList.Clear();*/
 
-                                                //elem.color = repeatableValueList[0]
+                                                    foreach(var newColor in colorsLayout)
+                                                    {
+                                                        repeatableValueList.Add(newColor.Key);
+                                                    }
+                                                    data_copy[posX, posY] = repeatableValueList.OrderBy(x => Math.Abs(x - elem.color)).First();
+                                                    repeatableValueList.Clear();
+                                                }
                                             }
                                         }
                                     }
                                 }
+                                is_flag = true;
+                                break;
                             }
-                            is_flag = true;
-                            break;
+                            if (is_flag)
+                            {
+                                break;
+                            }
+                            
                         }
-                        if (is_flag)
-                        {
-                            break;
-                        }
+                        temporaryResultEnd.Clear();
+                        _fullABS.Clear();
                     }
                 }
             }
             _all_reference_elems = null;
+            _fullABS = null;
             temporaryResult = null;
-            arrayVisit.Clear();
+            //arrayVisit.Clear();
             Console.WriteLine("___");
             GC.Collect();
 
-            for (int i = 0; i < data_copy.GetLength(1); i++)
-            {
-                for (int j = 0; j < data_copy.GetLength(0); j++)
-                {
-                    if(i == 40 && j == 42)
-                    {
-                        Console.WriteLine(data_copy[i,j]);
-                    }
-                }
-            }
 
             _currentBitmap.UnlockBits(bitmapData);
 
@@ -407,11 +484,11 @@ namespace SignaliEdge
                 {
                     data = scan0 + i * bData.Stride + j * bitsPerPixel / 8;
 
-                    if (bitsPerPixel >= 24)
+                    if (bitsPerPixel >= 24 && data_copy[j, i] != 0)
                     {
-                        data[0] = (byte)data_copy[i, j];
-                        data[1] = (byte)data_copy[i, j]; 
-                        data[2] = (byte)data_copy[i, j]; 
+                        data[0] = (byte)data_copy[j, i];
+                        data[1] = (byte)data_copy[j, i]; 
+                        data[2] = (byte)data_copy[j, i]; 
                     }
 
                 }
@@ -419,7 +496,9 @@ namespace SignaliEdge
 
             _currentBitmap.UnlockBits(bData);
 
-
+            sw.Stop();
+            string elapsed = sw.Elapsed.ToString();
+            Console.WriteLine("Done after: " + sw.Elapsed);
             return _currentBitmap;
         }
 
@@ -472,7 +551,7 @@ namespace SignaliEdge
             bitsPerPixel = GetBitsPerPixel(bData.PixelFormat);
             byte* scan0 = (byte*)bData.Scan0.ToPointer();
 
-            var normalizedMatrix = data_copy;
+            var normalizedMatrix = new double[_currentBitmap.Width, _currentBitmap.Height];//new double[_currentBitmap.Width, _currentBitmap.Height];
 
             byte* data;
             for (int i = 0; i < bData.Height; ++i)
@@ -481,6 +560,7 @@ namespace SignaliEdge
                 {
                     data = scan0 + i * bData.Stride + j * bitsPerPixel / 8; // * bitsPerPixel / 8
                     normalizedMatrix[j, i] = data[0] / 255d;
+                    
                     //data is a pointer to the first byte of the 3-byte color data
                 }
             }

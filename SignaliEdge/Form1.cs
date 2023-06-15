@@ -85,7 +85,7 @@ namespace SignaliEdge
             imageHandler.OriginalBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
             imageHandler.CurrentBitmap = (Bitmap)Image.FromFile(fdIzborSlike.FileName);
 
-            //imageHandler.SetGrayscale();
+            imageHandler.SetGrayscale();
             imageHandler.SetNewImage();
 
             inputImage = new Image<Bgr, byte>(fdIzborSlike.FileName);
@@ -120,7 +120,7 @@ namespace SignaliEdge
 
             try
             {
-                double[,] n, slika;
+                double[,] n,slika;
 
                 MyGlobals.g_const_height_img = inputImage.Height;
                 n = imageHandler.GetNormalizedMatrix();
@@ -128,16 +128,16 @@ namespace SignaliEdge
                 imageHandler.DenormalizeCurrent(slika, _dataCoordinates);
 
                 //Распознование контуров
-                //detector.ContoursList(_dataCoordinates);
+                detector.ContoursList(_dataCoordinates);
 
                 //
                 MyGlobals.g_inputImage = inputImage;
-                //BlocksDictionary = creator.shapeCenter(detector.currentListDictionary);
+                BlocksDictionary = creator.shapeCenter(detector.currentListDictionary);
 
                 //
-                //BlocksDictionary = creator.FilterDictionary(BlocksDictionary, inputImage.Convert<Gray, Byte>().Bitmap);
+                BlocksDictionary = creator.FilterDictionary(BlocksDictionary, inputImage.Convert<Gray, Byte>().Bitmap);
                 //Поиск незамкнутых линий разделителей
-                //creator.FilterIncompleteLines(BlocksDictionary, detector.incompleteLines);
+                creator.FilterIncompleteLines(BlocksDictionary, detector.incompleteLines);
 
                 //hTMLDOM.HTMLCompletion(BlocksDictionary);
                 //textDictionary = textRecognition.RecognizerText(BlocksDictionary, inputImage, fdIzborSlike.FileName);
@@ -161,7 +161,7 @@ namespace SignaliEdge
                             };
                             using (VectorOfPoint vp = new VectorOfPoint(rect))
                             {
-                                CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 1);
+                                CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 2);
                             }
                         }
                         foreach (var elem in textDictionary.Values)
@@ -209,10 +209,15 @@ namespace SignaliEdge
                 n = null;
                 slika = null;
                 //Y ___ X
-                //inputImage[19, 20] = new Bgr(0, 0, 255);
-                //inputImage[9, 111] = new Bgr(0, 0, 255);
-                //inputImage[8, 0] = new Bgr(0, 0, 255);
+                inputImage[10, 75] = new Bgr(0, 255, 0);
+                inputImage[10, 76] = new Bgr(0, 255, 0);
+                inputImage[23, 38] = new Bgr(0, 255, 0);
+                inputImage[23, 39] = new Bgr(0, 255, 0);
 
+                inputImage[22, 38] = new Bgr(0, 255, 0);
+                inputImage[22, 39] = new Bgr(0, 255, 0);
+                inputImage[22, 40] = new Bgr(0, 255, 0);
+                inputImage[22, 41] = new Bgr(0, 255, 0);
 
 
                 sw.Stop();

@@ -109,7 +109,7 @@ namespace SignaliEdge
             for (int i = -prosirenje; i < x + prosirenje - 1; i++)
                 for (int j = -prosirenje; j < y + prosirenje - 1; j++)
                 {
-                    var ii = (i + x) % x;
+                    int ii = (i + x) % x;
                     int jj = (j + y) % y;
                     vracaSe[i + 2, j + 2] = matrica[ii, jj];
                 }
