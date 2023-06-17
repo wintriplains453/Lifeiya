@@ -159,6 +159,7 @@ namespace SignaliEdge
                                 elem.PointsArea[3],
 
                             };
+                            //Показывает все найденые фигуры
                             using (VectorOfPoint vp = new VectorOfPoint(rect))
                             {
                                 CvInvoke.Polylines(inputImage, vp, true, new MCvScalar(201, 25, 101, 255), 2);
@@ -178,11 +179,12 @@ namespace SignaliEdge
                                 CvInvoke.Polylines(inputImage, vm, true, new MCvScalar(0, 136, 248, 255), 2);
                             }
                         }
+                        //Показывает все замкнутые контуры
                         /*foreach (var item in detector.currentListDictionary.Values)
                         {
                             foreach(var data in item.data)
                             {
-                                inputImage[data.Y, data.X] = new Bgr(0, 0, 255);
+                                inputImage[data.Y, data.X] = new Bgr(255, 0, 0);
                             }
                         }*/
                         foreach(var elem in MyGlobals.test.Values)
@@ -209,15 +211,15 @@ namespace SignaliEdge
                 n = null;
                 slika = null;
                 //Y ___ X
-                inputImage[10, 75] = new Bgr(0, 255, 0);
-                inputImage[10, 76] = new Bgr(0, 255, 0);
+                //inputImage[12, 30] = new Bgr(0, 255, 0);
+                /*inputImage[10, 76] = new Bgr(0, 255, 0);
                 inputImage[23, 38] = new Bgr(0, 255, 0);
                 inputImage[23, 39] = new Bgr(0, 255, 0);
 
                 inputImage[22, 38] = new Bgr(0, 255, 0);
                 inputImage[22, 39] = new Bgr(0, 255, 0);
                 inputImage[22, 40] = new Bgr(0, 255, 0);
-                inputImage[22, 41] = new Bgr(0, 255, 0);
+                inputImage[22, 41] = new Bgr(0, 255, 0);*/
 
 
                 sw.Stop();

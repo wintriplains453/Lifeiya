@@ -126,13 +126,17 @@ namespace SignaliEdge
                 }
             }
 
-            foreach(var color in colorsLayout.ToArray())
+            if(colorsLayout.Count > 10)
             {
-                if((double)color.Value/(double)colorCounter*100d < 5)
+                foreach(var color in colorsLayout.ToArray())
                 {
-                    colorsLayout.Remove(color.Key);
+                    if((double)color.Value/(double)colorCounter*100d < 5)
+                    {
+                        colorsLayout.Remove(color.Key);
+                    }
                 }
             }
+
 
 
             for (int i = 0; i < mainHeight - 6; i += stepConvolutionHeight)
@@ -141,17 +145,11 @@ namespace SignaliEdge
                 {
 
                     arrayVisit.Clear();
+                    //checkingVisited.Clear();
+
                     abs = new List<ItemPixel>();
                     temporaryResult = new List<ItemReference>();
                     counter = 0;
-
-                    /*if((bitmapData.Width - j) < 7)
-                    {
-                        stepConvolutionWidth = bitmapData.Width % 6 == 0 ? 6 : 6 - (bitmapData.Width % 6);
-                    } if((bitmapData.Height - i) < 7)
-                    {
-                        stepConvolutionHeight = bitmapData.Height % 6 == 0 ? 6 : 6 - (bitmapData.Height % 6);
-                    }*/
 
                     List<int> checkingColors = new List<int>();
                     bool is_allowance = true;
@@ -163,7 +161,6 @@ namespace SignaliEdge
                             pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
 
                             var gray = (byte)(.299 * pixel[2] + .587 * pixel[1] + .114 * pixel[0]);
-                            //Console.WriteLine(pixel[0] + " i = " + y + " j = " + x);
                             
                             if (!checkingColors.Contains(gray))
                             {
@@ -180,18 +177,15 @@ namespace SignaliEdge
                             break;
                         }
                     }
-                    
 
                     if (is_allowance == false)
                     {
-                        //Console.WriteLine("i = " + i + " j = " + j);
                         for (int y = i - stepConvolutionHeight; y <= i + stepConvolutionHeight; y += stepConvolutionHeight)
                         {
                             for (int x = j - stepConvolutionWidth; x <= j + stepConvolutionWidth; x += stepConvolutionWidth)
                             {
                                 if (0 <= y && y < mainHeight && 0 <= x && x < mainWidth)
                                 {
-                                    //Console.WriteLine("y !!= " + y + " x !!= " + x + " mainHeight = " + mainHeight);
                                     if (y == i && x == j)
                                     {
                                         currentElemY = y;
@@ -207,8 +201,10 @@ namespace SignaliEdge
                         void repeatCircle(int y, int x)
                         {
                             abs.Clear();
+                            arrayVisit.Clear();
                             temporaryResult = new List<ItemReference>();
                             counter = 0;
+
                             //Проход по циклу с шагом 6 
                             for (int r = y; r < (y + stepConvolutionHeight); r++)
                             {
@@ -226,15 +222,6 @@ namespace SignaliEdge
                                         startPoint.index = counter;
                                         startPoint.position = new Point(c, r);
                                         counter++;
-
-                                        //var gray = (byte)(.299 * pixel[2] + .587 * pixel[1] + .114 * pixel[0]);
-                                        //data_copy[c, r] = gray;
-                                        //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
-
-                                        //if (pixel[0] != 255 && pixel[1] != 255 && pixel[2] != 255)
-                                        //{
-                                        //Console.WriteLine(r + " __ " + c + " | " + data_copy[r, c]);
-                                        //}
 
 
                                         for (int yt = r - 1; yt <= r + 1; yt++)
@@ -269,8 +256,8 @@ namespace SignaliEdge
                                     }
                                 }
                             }
-                            //BFS                            
-                            for (int a = 0; a < abs.Count; a++)//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! если abs 36 то нет нужды в переборе и чистке, можно жлбавить поле к общему списку
+                            //BFS
+                            for (int a = 0; a < abs.Count; a++)//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! если abs 36 то нет нужды в переборе и чистке, можно добавить поле к общему списку
                             {
                                 if (!arrayVisit.Contains(abs[a].id))
                                 {
@@ -325,11 +312,9 @@ namespace SignaliEdge
                                     temporaryResult.Add(new ItemReference(_all_reference_elems, resultStride, _reference_count));
                                     _all_reference_elems.Clear();
                                     _reference_count++;
-
-                                    //queue = null;
-                                    //resultStride = null;
                                 }
                             }
+                            
                             if (temporaryResult.Count > 0)
                             {
                                 temporaryResultEnd.Add(temporaryResult);
@@ -339,7 +324,7 @@ namespace SignaliEdge
                         //CLEAR
                         //Clear отменится если 36 элементов одинаковые 
                         bool is_flag = false;
-                        for (int item = 0; item < temporaryResultEnd.Count; item++)//Иногда count 36 
+                        for (int item = 0; item < temporaryResultEnd.Count; item++)//Иногда count 36 - делит все 255 на 36 частей, должно быть в таком случаи 1
                         {
                             if ($"{currentElemY}|{currentElemX}" == temporaryResultEnd[item][0].list[0].id)
                             {
@@ -348,7 +333,6 @@ namespace SignaliEdge
                                 {
                                     if (temporaryResultEnd[item].Count > 1)
                                     {
-                                        Console.WriteLine(temporaryResultEnd);
                                         if (temporaryResultEnd[item][ic].list.Count < MyGlobals.g_list_count_more)
                                         {
 
@@ -395,7 +379,6 @@ namespace SignaliEdge
                                                     is_cleaned = false;
                                                     break;
                                                 }
-                                                // console.log(elemArr.id + " " + counterLength)
                                             }
 
                                             if (is_cleaned)
@@ -406,37 +389,6 @@ namespace SignaliEdge
                                                     int posY = Convert.ToInt32(elem.id.Split('|')[0]);
                                                     int posX = Convert.ToInt32(elem.id.Split('|')[1]);
                                                     List<byte> repeatableValueList = new List<byte>();
-                                                    //Console.WriteLine(elem.color + " " + elem.id);
-
-                                                    /*for (int y = posY - 1; y <= posY + 1; ++y)//На какой пиксель из 8 соседних заменить текущий
-                                                    {
-                                                        for (int x = posX - 1; x <= posX + 1; ++x)
-                                                        {
-                                                            pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
-
-                                                            if (0 <= y && y < bitmapData.Height && 0 <= x && x < bitmapData.Width && (y != posY || x != posX))
-                                                            {
-                                                                //8 соседей
-                                                                if (pixel[0] != elem.color)
-                                                                {
-                                                                    if(!repeatableValueList.Contains(pixel[0]))
-                                                                    {
-                                                                        repeatableValueList.Add(pixel[0]);
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }*/
-                                                    //Console.WriteLine(repeatableValueList.Count);
-                                                    /*if(repeatableValueList.Count > 1)
-                                                    {
-                                                        data_copy[posX, posY] = repeatableValueList.OrderBy(x => Math.Abs(x - data_copy[posX, posY])).First();
-                                                    } 
-                                                    else if(repeatableValueList.Count == 1) 
-                                                    {
-                                                        data_copy[posX, posY] = repeatableValueList[0];
-                                                    }
-                                                    repeatableValueList.Clear();*/
 
                                                     foreach(var newColor in colorsLayout)
                                                     {
@@ -467,7 +419,6 @@ namespace SignaliEdge
             _fullABS = null;
             temporaryResult = null;
             //arrayVisit.Clear();
-            Console.WriteLine("___");
             GC.Collect();
 
 
@@ -498,7 +449,7 @@ namespace SignaliEdge
 
             sw.Stop();
             string elapsed = sw.Elapsed.ToString();
-            Console.WriteLine("Done after: " + sw.Elapsed);
+            Console.WriteLine("Время на чистку: " + sw.Elapsed);
             return _currentBitmap;
         }
 
