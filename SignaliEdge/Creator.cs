@@ -299,7 +299,6 @@ namespace SignaliEdge
                 int countLines = 0;
                 List<OpenLines> endAngles = new List<OpenLines>();
                 Dictionary<int, SemiLines> _ListdataCoordinatesTriple = new Dictionary<int, SemiLines>();
-                Console.WriteLine("_");
 
                 for (int i = 0; i < item.Count - 1; i++)
                 {
@@ -335,7 +334,7 @@ namespace SignaliEdge
                             char plain = largest__coordinate.value > 1 ? 'Y' : 'X';//! опасное место, возможна путаница между X и Y 
 
                             semiFigureCount++;
-                            Console.WriteLine("! " + factorLine + " start " + _ListdataCoordinates[0] + " end " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
+                            //Console.WriteLine("! " + factorLine + " start " + _ListdataCoordinates[0] + " end " + _ListdataCoordinates[_ListdataCoordinates.Count - 1]);
 
                             if(endAngles.Count == 0)
                             {

@@ -94,7 +94,6 @@ namespace SignaliEdge
             HashSet<string> checkingVisited = new HashSet<string>();
             Dictionary<byte, int> colorsLayout = new Dictionary<byte, int>();
 
-
             byte counter = 0;
 
             //Цикл поиска
@@ -130,7 +129,7 @@ namespace SignaliEdge
             {
                 foreach(var color in colorsLayout.ToArray())
                 {
-                    if((double)color.Value/(double)colorCounter*100d < 5)
+                    if((double)color.Value/(double)colorCounter*100d < 5)//5 это значаение в %
                     {
                         colorsLayout.Remove(color.Key);
                     }
@@ -145,7 +144,7 @@ namespace SignaliEdge
                 {
 
                     arrayVisit.Clear();
-                    //checkingVisited.Clear();
+                    checkingVisited.Clear();
 
                     abs = new List<ItemPixel>();
                     temporaryResult = new List<ItemReference>();
@@ -154,9 +153,12 @@ namespace SignaliEdge
                     List<int> checkingColors = new List<int>();
                     bool is_allowance = true;
 
-                    for (int y = i; y <= i + stepConvolutionHeight; y++)
+                    int SubHeight = i + stepConvolutionHeight;
+                    int SubWidth = j + stepConvolutionWidth;
+
+                    for (int y = i; y <= SubHeight; y++)
                     {
-                        for (int x = j; x <= j + stepConvolutionWidth; x++)
+                        for (int x = j; x <= SubWidth; x++)
                         {
                             pixel = scanZero + y * bitmapData.Stride + x * bitsPerPixel / 8;
 
@@ -180,9 +182,12 @@ namespace SignaliEdge
 
                     if (is_allowance == false)
                     {
-                        for (int y = i - stepConvolutionHeight; y <= i + stepConvolutionHeight; y += stepConvolutionHeight)
+                        int StepHeight = i + stepConvolutionHeight;
+                        int StepWidth = j + stepConvolutionWidth;
+
+                        for (int y = i - stepConvolutionHeight; y <= StepHeight; y += stepConvolutionHeight)
                         {
-                            for (int x = j - stepConvolutionWidth; x <= j + stepConvolutionWidth; x += stepConvolutionWidth)
+                            for (int x = j - stepConvolutionWidth; x <= StepWidth; x += stepConvolutionWidth)
                             {
                                 if (0 <= y && y < mainHeight && 0 <= x && x < mainWidth)
                                 {
@@ -333,11 +338,19 @@ namespace SignaliEdge
                                 {
                                     if (temporaryResultEnd[item].Count > 1)
                                     {
-                                        if (temporaryResultEnd[item][ic].list.Count < MyGlobals.g_list_count_more)
+                                        if(temporaryResultEnd[item][ic].list.Count < 12)
                                         {
-
+                                            List<byte> repeatableValueList = new List<byte>();
                                             bool is_cleaned = true;
-                                            if (temporaryResultEnd[item][ic].refs.Count > 0)
+
+                                            foreach (var newColor in colorsLayout)
+                                            {
+                                                repeatableValueList.Add(newColor.Key);
+                                            }
+                                            byte nearColor = repeatableValueList.OrderBy(x => Math.Abs(x - temporaryResultEnd[item][ic].list[0].color)).First();
+
+                                            if (Math.Abs(nearColor - temporaryResultEnd[item][ic].list[0].color) < 10) {} 
+                                            else if (temporaryResultEnd[item][ic].refs.Count > 0)
                                             {
                                                 ItemPixel elemArr = temporaryResultEnd[item][ic].list[0];
 
@@ -349,7 +362,7 @@ namespace SignaliEdge
                                                 {
                                                     // console.log(temporaryResultEnd[item][i].refs[j])
                                                     int finding = _fullABS.Find(elem => elem.id == temporaryResultEnd[item][ic].refs[jc]).index_reference;
-                                                   
+
                                                     bool neewerFlag = false;
                                                     if (!checkingLength.Contains(finding))
                                                     {
@@ -363,7 +376,6 @@ namespace SignaliEdge
 
                                                                     counterLength += temporaryResultEnd[n][m].list.Count;
                                                                     neewerFlag = true;
-
                                                                     break;
                                                                 }
                                                             }
@@ -380,7 +392,6 @@ namespace SignaliEdge
                                                     break;
                                                 }
                                             }
-
                                             if (is_cleaned)
                                             {
                                                 for (int jc = 0; jc < temporaryResultEnd[item][ic].list.Count; jc++)
@@ -388,9 +399,9 @@ namespace SignaliEdge
                                                     ItemPixel elem = temporaryResultEnd[item][ic].list[jc];
                                                     int posY = Convert.ToInt32(elem.id.Split('|')[0]);
                                                     int posX = Convert.ToInt32(elem.id.Split('|')[1]);
-                                                    List<byte> repeatableValueList = new List<byte>();
+                                                    repeatableValueList = new List<byte>();
 
-                                                    foreach(var newColor in colorsLayout)
+                                                    foreach (var newColor in colorsLayout)
                                                     {
                                                         repeatableValueList.Add(newColor.Key);
                                                     }
